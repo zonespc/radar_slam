@@ -33,6 +33,8 @@ CarPoseEstimator::CarPoseEstimator( void ) :
     node_handle_.getParam( "sigma_speed", sigma_speed );
     node_handle_.getParam( "sigma_steer_angle", sigma_steer_angle );
 
+    node_handle_.getParam( "rel_speed_thresh", rel_speed_thresh );
+
     node_handle_.getParam( "sigma_px_init", sigma_px_init );
     node_handle_.getParam( "sigma_py_init", sigma_py_init );
     node_handle_.getParam( "sigma_yaw_init", sigma_yaw_init );
@@ -158,9 +160,9 @@ void CarPoseEstimator::inverseSensorModel(
         const std::vector<radar_ros_interface::RadarTarget> &targets,
         const Eigen::Affine3d &tf_sensor_to_world )
 {
+    // Compute particle weights from current measurements:
     if( pf_update_on )
     {
-        // Compute particle weights from current measurements:
         Eigen::Vector3d p_sensor, p_world;
         int target_i, target_j;
         double p_weight;
@@ -169,9 +171,7 @@ void CarPoseEstimator::inverseSensorModel(
             p_weight = 0.0;
             for( auto it = targets.begin(); it != targets.end(); ++it )
             {
-                if( ( it->range < max_r ) && ( it->snr >= min_snr ) )
-                {
-                    //std::cout << it->speed << std::endl;
+                //std::cout << it->speed << std::endl;
                     // Compute position of the target in the sensor frame:
                     p_sensor( 0 ) = cos( ( M_PI / 180.0 ) * it->azimuth )
                             * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
@@ -187,7 +187,6 @@ void CarPoseEstimator::inverseSensorModel(
                     // Get the probability at the particle's target position and update particle weight:
                     p_weight += log_odds_to_prob(
                             map_log_odds_( target_i, target_j ) );
-                }
             }
 
             // Low-pass filter the weight update:
@@ -299,13 +298,15 @@ void CarPoseEstimator::inverseSensorModel(
                      << std::endl;*/
 
                     p_d = std::pow( prob_fa, ( 1.0 / ( 1.0 + it->snr ) ) );
-                    map_log_odds_( i, j ) += p_d
+                    map_log_odds_( i, j ) += 5.0
+                            * p_d
                             * normal_dist( it->range, sigma_r, r )
                                             * normal_dist(
                                     ( M_PI / 180.0 ) * it->azimuth, sigma_th,
                                                            th );
 
-                    map_log_odds_( i, j ) -= p_d
+                    map_log_odds_( i, j ) -= 5.0
+                            * p_d
                             * normal_dist( 0.0, 0.5 * it->range, r )
                             * normal_dist( ( M_PI / 180.0 ) * it->azimuth, sigma_th,
                      th );
@@ -322,17 +323,21 @@ void CarPoseEstimator::inverseSensorModel(
     for( int i = 0; i < num_particles; ++i )
     {
         particle_pose_array_.poses.at( i ) = tf2::toMsg( particle_pose_.at( i ) );
+        particle_pose_array_.poses.at( i ).position.z = 100.0 * weights_.at( i ); // hacky scaling of z to reflect weight for viz
     }
     pub_poses_.publish( particle_pose_array_ );
 }
 
 void CarPoseEstimator::processModel( double speed, double steer_angle, double dt,
                                      Eigen::Affine3d &pose, Eigen::Matrix<double, 6, 1> &vel,
-                                     double &yaw_unwrpd )
+                                     double &yaw_unwrpd, bool is_base )
 {
-    // Add noise to the inputs:
-    speed += dist_speed_( dist_gen_ );
-    steer_angle += dist_steer_angle_( dist_gen_ );
+    // Add noise to the inputs to perturb the particles, unless updating the base state directly:
+    if( !is_base )
+    {
+        speed += dist_speed_( dist_gen_ );
+        steer_angle += dist_steer_angle_( dist_gen_ );
+    }
 
     // Update the orientation using speed and steering angle:
     vel.segment( 3, 3 ) = Eigen::Vector3d(
@@ -351,6 +356,9 @@ void CarPoseEstimator::processModel( double speed, double steer_angle, double dt
 
 void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
 {
+    // Copy the message in case we want to modify it:
+    radar_slam::CarData car_data_msg = msg;
+
     // Update the timestep, handling first time carefully:
     ros::Time time_now = ros::Time::now();
     if( first_time_ )
@@ -363,7 +371,8 @@ void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
     // Update orientation using speed and steering angle:
     if( map_detections_only )
     {
-        processModel( msg.speed, msg.steer_angle, dt_, base_pose_, base_vel_, base_yaw_ );
+        processModel( car_data_msg.speed, car_data_msg.steer_angle, dt_, base_pose_, base_vel_,
+                      base_yaw_, true );
     }
     else
     {
@@ -371,14 +380,16 @@ void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
         {
             for( int i = 0; i < num_particles; ++i )
             {
-                processModel( msg.speed, msg.steer_angle, dt_, particle_pose_.at( i ),
+                processModel( car_data_msg.speed, car_data_msg.steer_angle, dt_,
+                              particle_pose_.at( i ),
                               particle_vel_.at( i ),
-                              particle_yaw_.at( i ) );
+                              particle_yaw_.at( i ), false );
             }
         }
         else // propagate only the base pose through the process model:
         {
-            processModel( msg.speed, msg.steer_angle, dt_, base_pose_, base_vel_, base_yaw_ );
+            processModel( car_data_msg.speed, car_data_msg.steer_angle, dt_, base_pose_, base_vel_,
+                          base_yaw_, true );
         }
     }
 
@@ -391,30 +402,43 @@ void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
     Eigen::Affine3d tf_sensor_to_world = tf2::transformToEigen(
             buffer_tf_.lookupTransform( "base_link", msg.header.frame_id, ros::Time( 0 ) ) );
 
+    // Filter out targets based on range, relative speed, and SNR:
+    //std::cout << "number of raw targets: " << msg.raw_targets.size() << std::endl;
+    std::vector<radar_ros_interface::RadarTarget> targets;
+    for( auto it = msg.raw_targets.begin(); it != msg.raw_targets.end(); ++it )
+    {
+        // Compute the relative speed of the target using current car pose estimate:
+        double rel_speed = ( tf_sensor_to_world.linear().inverse()
+                * Eigen::Vector3d( base_vel_.segment( 0, 3 ) ) )( 0 )
+                           + it->speed;
+        //std::cout << "car speed: " << ( tf_sensor_to_world.linear().inverse()
+        //       * Eigen::Vector3d( base_vel_.segment( 0, 3 ) ) )( 0 ) << " target speed: " << it->speed << " rel_speed: " << rel_speed << std::endl;
+        if( ( std::abs( rel_speed ) < rel_speed_thresh ) && ( it->range < max_r )
+            && ( it->snr >= min_snr ) )
+        {
+            targets.push_back( *it );
+        }
+    }
+
     if( map_detections_only )
     {
         // Find the nearest grid cell to each RAW detection and set it occupied:
         Eigen::Vector3d p_sensor, p_world;
         int target_i, target_j;
-        std::vector<radar_ros_interface::RadarTarget> targets = msg.raw_targets;
         for( auto it = targets.begin(); it != targets.end(); ++it )
         {
-            if( ( it->range < max_r ) && ( it->snr >= min_snr ) )
-            {
-                p_sensor( 0 ) = cos( ( M_PI / 180.0 ) * it->azimuth )
-                        * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
-                p_sensor( 1 ) = sin( ( M_PI / 180.0 ) * it->azimuth )
-                        * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
-                p_sensor( 2 ) = sin( ( M_PI / 180.0 ) * it->elevation ) * it->range;
+            p_sensor( 0 ) = cos( ( M_PI / 180.0 ) * it->azimuth )
+                    * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
+            p_sensor( 1 ) = sin( ( M_PI / 180.0 ) * it->azimuth )
+                    * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
+            p_sensor( 2 ) = sin( ( M_PI / 180.0 ) * it->elevation ) * it->range;
 
-                p_world = tf_sensor_to_world * p_sensor;
-                world_pos_to_grid_ind( p_world, target_i, target_j );
+            p_world = tf_sensor_to_world * p_sensor;
+            world_pos_to_grid_ind( p_world, target_i, target_j );
 
-                map_log_odds_( target_i, target_j ) = 1.0;
-                msg_map_.data.at( target_j * map_grid_size + target_i ) =
-                        log_odds_to_map_prob(
-                                map_log_odds_( target_i, target_j ) );
-            }
+            map_log_odds_( target_i, target_j ) = 1.0;
+            msg_map_.data.at( target_j * map_grid_size + target_i ) = log_odds_to_map_prob(
+                    map_log_odds_( target_i, target_j ) );
         }
     }
     else
@@ -422,7 +446,8 @@ void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
         if( ( dec_ind_ % dec_rate ) == 0 )
         {
             // Update the log-odds map:
-            inverseSensorModel( msg.raw_targets, tf_sensor_to_world );
+            //std::cout << "msg frame id: " << msg.header.frame_id << std::endl;
+            inverseSensorModel( targets, tf_sensor_to_world );
         }
         ++dec_ind_;
     }

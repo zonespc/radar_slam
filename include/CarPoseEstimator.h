@@ -33,7 +33,7 @@ public:
 
     void processModel( double speed, double steer_angle, double dt, Eigen::Affine3d &pose,
                        Eigen::Matrix<double, 6, 1> &vel,
-                       double &yaw_unwrpd );
+                       double &yaw_unwrpd, bool is_base );
 
     void updatePose( const radar_slam::CarData &msg );
     void updateMap( const radar_ros_interface::RadarData &msg );
@@ -193,8 +193,9 @@ public:
     double min_cell_dist;
 
     double sigma_speed;
-
     double sigma_steer_angle;
+    double rel_speed_thresh;
+
     double sigma_r;
     double sigma_th;
     double sigma_no_r;
@@ -233,6 +234,7 @@ private:
 
     std::vector<double> weights_;
     geometry_msgs::PoseArray particle_pose_array_;
+
     ros::Publisher pub_poses_;
 
     int dec_ind_;
