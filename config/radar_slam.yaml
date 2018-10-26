@@ -1,0 +1,36 @@
+wheelbase: 2.67
+steering_ratio: 18.61
+map_grid_res: 0.5 # in meters
+map_grid_size: 400 # in cells
+num_update_cells: 20
+min_cell_dist: 2.0    # meters
+
+sigma_speed: 0.5 # measured speed uncertainty (m/s)
+sigma_steer_angle: 10.0 # measured steering angle uncertainty (deg)
+
+sigma_r: 0.01  # 0.1 range uncertainty (std dev, meters)
+sigma_th: 0.01 # 0.1 azimuth uncertainty (std dev, rad)
+sigma_no_r: 0.01  # 0.1 range uncertainty (std dev, meters)
+sigma_no_th: 0.01 # 0.1 azimuth uncertainty (std dev, rad)
+max_r: 15.0 # maximum range (meters)
+max_th: 0.785 # maximum azimuth (absolute value, rad)
+min_snr: 15.0
+max_snr: 20.0 # for scaling map probabilities
+prob_fa: 0.001 # false alarm probability (approx)
+
+sigma_px_init: 1.0
+sigma_py_init: 1.0
+sigma_yaw_init: 0.1
+num_particles: 100
+p_alpha: 0.7
+w_min_max_thresh: 0.01
+
+dec_rate: 1
+map_detections_only: false
+use_sensor_fov: true
+pf_update_on: true
+
+print_debug: false
+
+#radar_data_topics: ["tipi_79_bsd_front_left_data"]
+radar_data_topics: ["tipi_79_bsd_front_left_data", "tipi_79_bsd_front_right_data", "tipi_79_bsd_rear_left_data", "tipi_79_bsd_rear_right_data"]
