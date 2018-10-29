@@ -18,7 +18,6 @@ CarPoseEstimator::CarPoseEstimator( void ) :
     node_handle_.getParam( "map_grid_res", map_grid_res );
     node_handle_.getParam( "map_grid_size", map_grid_size );
     node_handle_.getParam( "num_update_cells", num_update_cells );
-    node_handle_.getParam( "min_cell_dist", min_cell_dist );
 
     node_handle_.getParam( "sigma_r", sigma_r );
     node_handle_.getParam( "sigma_th", sigma_th );
@@ -27,7 +26,6 @@ CarPoseEstimator::CarPoseEstimator( void ) :
     node_handle_.getParam( "max_r", max_r );
     node_handle_.getParam( "max_th", max_th );
     node_handle_.getParam( "min_snr", min_snr );
-    node_handle_.getParam( "max_snr", max_snr );
     node_handle_.getParam( "prob_fa", prob_fa );
 
     node_handle_.getParam( "sigma_speed", sigma_speed );
@@ -47,8 +45,6 @@ CarPoseEstimator::CarPoseEstimator( void ) :
     node_handle_.getParam( "map_detections_only", map_detections_only );
     node_handle_.getParam( "use_sensor_fov", use_sensor_fov );
     node_handle_.getParam( "pf_update_on", pf_update_on );
-
-    node_handle_.getParam( "print_debug", print_debug );
 
     node_handle_.getParam( "radar_data_topics", radar_data_topics );
 
@@ -417,10 +413,11 @@ void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
     pub_ogm_.publish( msg_map_ );
 
     // Send the updated car pose transform:
+    geometry_msgs::TransformStamped pose_tf;
     ros::Time time_now = ros::Time::now();
-    pose_tf_ = tf2::eigenToTransform( base_pose_ );
-    pose_tf_.header.stamp = time_now;
-    pose_tf_.child_frame_id = "chassis";
-    pose_tf_.header.frame_id = "base_link";
-    bcast_tf_.sendTransform( pose_tf_ );
+    pose_tf = tf2::eigenToTransform( base_pose_ );
+    pose_tf.header.stamp = time_now;
+    pose_tf.child_frame_id = "chassis";
+    pose_tf.header.frame_id = "base_link";
+    bcast_tf_.sendTransform( pose_tf );
 }

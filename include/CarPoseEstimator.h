@@ -1,3 +1,10 @@
+/**
+ * @file CarPoseEstimator.h
+ * @brief Car Pose Estimator class header file.
+ *
+ * @author Nick Rotella
+ */
+
 #ifndef CAR_POSE_ESTIMATOR_H_
 #define CAR_POSE_ESTIMATOR_H_
 
@@ -24,7 +31,11 @@
 #include <radar_ros_interface/RadarData.h>
 
 /**
- *
+ * Class for estimating the pose (for now, 2d position and yaw) of the autonomous driving testbed
+ * as well as a local Occupancy Grid Map (OGM) using a comibination of odometric and radar sensor
+ * data.  This is achieved using a particle filter to weight hypothesis car poses based on the
+ * current occupancy map and measured radar targets.  The estimated car pose and occupancy map are
+ * then published to ROS topics for visualization.
  */
 class CarPoseEstimator
 {
@@ -347,85 +358,295 @@ public:
                         std::bind2nd( std::divides<double>(), sum ) );
     }
 
-    // Parameters loaded from YAML file:
+    // Parameters loaded from YAML file radar_slam/config/radar_slam.yaml:
+    /**
+     * Wheelbase of the testbed, in meters
+     *
+     * This was obtained for the Acura ILX 2016 from digging into the OpenPilot codebase.
+     */
     double wheelbase;
+    /**
+     * Steering ratio of the testbed, dimensionless
+     *
+     * This relates the steering angle to the wheel angle (effectively a steering sensitivity).
+     */
     double steering_ratio;
+    /**
+     * Number of cells per dimension of the occupancy grid map
+     */
     int map_grid_size;
+    /**
+     * Resolution of a grid map cell, in meters
+     */
     double map_grid_res;
+    /**
+     * Number of cells around the sensor in each direction to use in the map update
+     *
+     * This is only used if #use_sensor_fov is set to false - then the entire area around the
+     * sensor is used for the update (rather than just those cells within the assumed sensor FOV).
+     */
     int num_update_cells;
-    double min_cell_dist;
 
+    /**
+     * Uncertainty in the measured car (wheel) speed, in meters/second
+     */
     double sigma_speed;
+    /**
+     * Uncertainty in the measured car steering wheel angle, in degrees
+     */
     double sigma_steer_angle;
+    /**
+     * Threshold for relative speed of radar targets to be used.
+     *
+     * The speed of each radar target is computed relative to the current estimated car speed and
+     * only those targets with a relative speed below the prescribed threshold (assumed static) are
+     * used in updates.
+     */
     double rel_speed_thresh;
 
+    /**
+     * Uncertainty in radar target range, in meters.
+     */
     double sigma_r;
+    /**
+     * Uncertainty in radar target azimuth (angle), in radians.
+     */
     double sigma_th;
+    /**
+     * Uncertainty in NOT radar target range, in meters.
+     *
+     * This controls the size of the Gaussian used to model the probability of NO detections between
+     * the radar sensor and the target.
+     */
     double sigma_no_r;
+    /**
+     * Uncertainty in NOT radar target azimuth (angle), in radians.
+     *
+     * This controls the size of the Gaussian used to model the probability of NO detections between
+     * the radar sensor and the target.
+     */
     double sigma_no_th;
+    /**
+     * Maximum target range used for updates, in meters.
+     *
+     * This can be set to the true maximum sensor range or, likely, to something smaller to filter
+     * out distance targets which add noise to the estimation.
+     */
     double max_r;
+    /**
+     * Maximum target azimuth (angle) used for updates, in radians.
+     *
+     * This can be set to the true maximum sensor angle or something else to narrow the FOV.
+     */
     double max_th;
+    /**
+     * Minimum allowable Signal-to-Noise Ratio (SNR) for targets used in updates.
+     *
+     * A SNR value of 15-20 is considered good, however it depends on the application.
+     */
     double min_snr;
-    double max_snr;
+    /**
+     * False alarm (FA) probability, a quantity used internally in the sensor firmware.
+     *
+     * The false alarm probability sets the level of acceptable false alarms (false positives). It
+     * is used in conjunction with the measured SNR to backcompute rough probability of detection.
+     */
     double prob_fa;
 
+    /**
+     * Initial uncertainty in particle x-position, in meters.
+     */
     double sigma_px_init;
+    /**
+     * Initial uncertainty in particle y-position, in meters.
+     */
     double sigma_py_init;
+    /**
+     * Initial uncertainty in particle yaw, in radians.
+     */
     double sigma_yaw_init;
 
+    /**
+     * Number of particles to be used in the particle filter.
+     *
+     * This is a tuning parameter which should be set somewhere between 10 and 1000 depending on the
+     * application.  The more particles used, the more computation time/power is required but the
+     * "better" the estimation quality (more hypotheses is a good thing).
+     */
     int num_particles;
+    /**
+     * Low pass filter gain for smoothing particle weight updates.
+     *
+     * This is set to something like 0.7 to smooth out large weight changes and prevent the
+     * estimated pose from changing rapidly.
+     */
     double p_alpha;
+    /**
+     * Ratio of smallest to largest particle weight, under which resampling is performed.
+     */
     double w_min_max_thresh;
 
+    /**
+     * Decimation rate for updates using the radar targets.
+     *
+     * This is set to use every ith sensor measurement array to save on computations.  To be tuned.
+     */
     int dec_rate;
+    /**
+     * Sets the occupancy mapping to use exactly integrated odometry and simply map radar targets.
+     *
+     * Used mainly for debugging to remove the influence of the filtering.
+     */
     bool map_detections_only;
+    /**
+     * Determines whether to update the map/poses using only the computed sensor field of view
+     *
+     * If this is set to true, the function #computeSensorFOV is used to compute the sensor's field
+     * of view in terms of grid map indices and only update cells which fall into the FOV range.
+     */
     bool use_sensor_fov;
+    /**
+     * Sets whether or not to use the particle filter in updating the map.
+     */
     bool pf_update_on;
 
-    bool print_debug;
-
+    /**
+     * Vector of strings of topics to which RadarData messages are published.
+     *
+     * These are the ROS topics which will be subscribed to and used to set the #updateMap callback.
+     */
     std::vector<std::string> radar_data_topics;
 
 private:
+    // State variables:
+    /**
+     * Pose (6d position+orientation) of the base (root link) of the car.
+     */
     Eigen::Affine3d base_pose_;
+    /**
+     * Unwrapped yaw angle of the car, in radians.
+     */
     double base_yaw_;
+    /**
+     * Velocity (6d linear+angular) vector of the base of the car.
+     */
     Eigen::Matrix<double, 6, 1> base_vel_;
 
+    /**
+     * Vector of 6d poses of all particles.
+     */
     std::vector<Eigen::Affine3d> particle_pose_;
+    /**
+     * Vector of unwrapped yaw andles of all particles, in radians.
+     */
     std::vector<double> particle_yaw_;
+    /**
+     * Vector of 6d velocity vectors of all particles.
+     */
     std::vector<Eigen::Matrix<double, 6, 1>> particle_vel_;
 
+    /**
+     * Vector of particle filter particle (likelihood) weights.
+     */
     std::vector<double> weights_;
-    geometry_msgs::PoseArray particle_pose_array_;
 
+    /**
+     * ROS message for sending out particle poses for visualization.
+     */
+    geometry_msgs::PoseArray particle_pose_array_;
+    /**
+     * ROS publisher for particle filter particle poses.
+     */
     ros::Publisher pub_poses_;
 
+    // Timing variables:
+    /**
+     * Decimation index, used to update less frequently.
+     */
     int dec_ind_;
+    /**
+     * Previous timestamp measured by ROS, used to compute timestep (dt).
+     */
     ros::Time time_prev_;
+    /**
+     * Timestep used for updates.
+     */
     double dt_;
+    /**
+     * Set to true on construction of the class, set to false after first update.
+     */
     bool first_time_;
 
+    /**
+     * ROS node handle used for interacting with ROS objects.
+     */
     ros::NodeHandle node_handle_;
+    /**
+     * Subscriber for receiving CarData messages.
+     */
     ros::Subscriber sub_car_speed_;
+    /**
+     * Vector of subcribers for receiving RadarData messages.
+     */
     std::vector<ros::Subscriber> sub_radar_targets_;
-    radar_ros_interface::RadarData radar_data_;
 
+    /**
+     * ROS transform "listener" (subscriber) which receives and stores TF information.
+     */
     tf2_ros::TransformListener listen_tf_;
+    /**
+     * ROS transform buffer, used to store TF information for a short period.
+     */
     tf2_ros::Buffer buffer_tf_;
-
+    /**
+     * ROS transform "broadcaster" (publisher) used to send out estimated car base pose.
+     */
     tf2_ros::TransformBroadcaster bcast_tf_;
-    geometry_msgs::TransformStamped pose_tf_;
+
+    /**
+     * Log-odds representation occupancy grid map, updated by the inverse sensor model.
+     */
+    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> map_log_odds_;
+    /**
+     * Position of the center (origin) of the occupancy map in the world frame.
+     */
+    Eigen::Vector3d map_origin_;
+    /**
+     * ROS message for encoding the stored occupancy grid map.
+     */
+    nav_msgs::OccupancyGrid msg_map_;
+    /**
+     * ROS publisher used to advertise the computed occupancy grid map for visualization.
+     */
     ros::Publisher pub_ogm_;
 
-    Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> map_log_odds_;
-    Eigen::Vector3d map_origin_;
-    nav_msgs::OccupancyGrid msg_map_;
+    /**
+     * Generator for various distributions.
+     */
     std::default_random_engine dist_gen_;
+    /**
+     * Normal distribution used to generate car speed noise.
+     */
     std::normal_distribution<double> dist_speed_;
+    /**
+     * Normal distribution used to generate car steering wheel angle noise.
+     */
     std::normal_distribution<double> dist_steer_angle_;
+    /**
+     * Normal distribution used to generate x-position noise.
+     */
     std::normal_distribution<double> dist_px_;
+    /**
+     * Normal distribution used to generate y-position noise.
+     */
     std::normal_distribution<double> dist_py_;
+    /**
+     * Normal distribution used to generate yaw noise.
+     */
     std::normal_distribution<double> dist_yaw_;
+    /**
+     * Uniform distribution used by #low_var_resamp in resampling particle filter weights.
+     */
     std::uniform_real_distribution<double> dist_weights_;
 
 };
