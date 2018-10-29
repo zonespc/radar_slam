@@ -171,22 +171,21 @@ void CarPoseEstimator::inverseSensorModel(
             p_weight = 0.0;
             for( auto it = targets.begin(); it != targets.end(); ++it )
             {
-                //std::cout << it->speed << std::endl;
-                    // Compute position of the target in the sensor frame:
-                    p_sensor( 0 ) = cos( ( M_PI / 180.0 ) * it->azimuth )
-                            * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
-                    p_sensor( 1 ) = sin( ( M_PI / 180.0 ) * it->azimuth )
-                            * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
-                    p_sensor( 2 ) = sin( ( M_PI / 180.0 ) * it->elevation ) * it->range;
+                // Compute position of the target in the sensor frame:
+                p_sensor( 0 ) = cos( ( M_PI / 180.0 ) * it->azimuth )
+                        * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
+                p_sensor( 1 ) = sin( ( M_PI / 180.0 ) * it->azimuth )
+                        * cos( ( M_PI / 180.0 ) * it->elevation ) * it->range;
+                p_sensor( 2 ) = sin( ( M_PI / 180.0 ) * it->elevation ) * it->range;
 
-                    // Transform the target position to the world frame using the particle pose:
-                    p_world = particle_pose_.at( i ) * base_pose_.inverse() * tf_sensor_to_world
-                              * p_sensor;
-                    world_pos_to_grid_ind( p_world, target_i, target_j );
+                // Transform the target position to the world frame using the particle pose:
+                p_world = particle_pose_.at( i ) * base_pose_.inverse() * tf_sensor_to_world
+                        * p_sensor;
+                world_pos_to_grid_ind( p_world, target_i, target_j );
 
-                    // Get the probability at the particle's target position and update particle weight:
-                    p_weight += log_odds_to_prob(
-                            map_log_odds_( target_i, target_j ) );
+                // Get the probability at the particle's target position and update particle weight:
+                p_weight += log_odds_to_prob(
+                        map_log_odds_( target_i, target_j ) );
             }
 
             // Low-pass filter the weight update:
@@ -197,23 +196,6 @@ void CarPoseEstimator::inverseSensorModel(
         double sum = std::accumulate( weights_.begin(), weights_.end(), 0.0 );
         std::transform( weights_.begin(), weights_.end(), weights_.begin(),
                         std::bind2nd( std::divides<double>(), sum ) );
-
-        // Print the particles and their weights:
-        if( print_debug )
-        {
-            std::cout << "particles: " << std::endl;
-            for( auto it = particle_pose_.begin(); it != particle_pose_.end(); ++it )
-            {
-                std::cout << "pos: " << it->translation().transpose() << "yaw: " << (it->linear().eulerAngles(0,1,2))(2) << std::endl;
-            }
-            std::cout << std::endl;
-            std::cout << "weights: ";
-            for( auto it = weights_.begin(); it != weights_.end(); ++it )
-            {
-                std::cout << *it << " ";
-            }
-            std::cout << std::endl;
-        }
 
         // Compute the estimated pose from the particles:
         base_yaw_ = 0.0;
@@ -232,7 +214,6 @@ void CarPoseEstimator::inverseSensorModel(
                 weights_.begin(), weights_.end() ) )
             < w_min_max_thresh )
         {
-            std::cout << "RESAMPLING" << std::endl;
             low_var_resamp( weights_, particle_pose_ );
         }
     }
@@ -276,40 +257,22 @@ void CarPoseEstimator::inverseSensorModel(
 
             if( r <= max_r && std::abs( th ) <= max_th )
             {
-                //std::cout << "r: " << r << "th: " << th << std::endl;
                 for( auto it = targets.begin(); it != targets.end(); ++it )
                 {
-                    /*                    std::cout << "target r: " << it->range << "target th: "
-                              << ( M_PI / 180.0 ) * it->azimuth
-                     << std::endl;*/
-
-                    /*                    p_d = std::pow( prob_fa, ( 1.0 / ( 1.0 + it->snr ) ) );
-                    //std::cout << "p_d: " << p_d << std::endl;
+                    p_d = std::pow( prob_fa, ( 1.0 / ( 1.0 + it->snr ) ) );
                     map_log_odds_( i, j ) += prob_to_log_odds(
                             p_d * prob_detection( r, th, it->range,
                                                   ( M_PI / 180.0 ) * it->azimuth ) );
                     map_log_odds_( i, j ) -= prob_to_log_odds(
                             p_d * prob_no_detection( r, th, it->range,
                                                      ( M_PI / 180.0 ) * it->azimuth ) );
-                    std::cout << "prob detection: "
-                    << prob_detection( r, th, it->range, ( M_PI / 180.0 ) * it->azimuth )
-                    << "prob no detection: "
-                    << prob_no_detection( r, th, it->range, ( M_PI / 180.0 ) * it->azimuth )
-                     << std::endl;*/
 
                     p_d = std::pow( prob_fa, ( 1.0 / ( 1.0 + it->snr ) ) );
-                    map_log_odds_( i, j ) += 5.0
-                            * p_d
-                            * normal_dist( it->range, sigma_r, r )
-                                            * normal_dist(
-                                    ( M_PI / 180.0 ) * it->azimuth, sigma_th,
-                                                           th );
+                    map_log_odds_( i, j ) += 5.0 * p_d * normal_dist( it->range, sigma_r, r )
+                            * normal_dist( ( M_PI / 180.0 ) * it->azimuth, sigma_th, th );
 
-                    map_log_odds_( i, j ) -= 5.0
-                            * p_d
-                            * normal_dist( 0.0, 0.5 * it->range, r )
-                            * normal_dist( ( M_PI / 180.0 ) * it->azimuth, sigma_th,
-                     th );
+                    map_log_odds_( i, j ) -= 5.0 * p_d * normal_dist( 0.0, 0.5 * it->range, r )
+                            * normal_dist( ( M_PI / 180.0 ) * it->azimuth, sigma_th, th );
                 }
             }
 
@@ -403,7 +366,6 @@ void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
             buffer_tf_.lookupTransform( "base_link", msg.header.frame_id, ros::Time( 0 ) ) );
 
     // Filter out targets based on range, relative speed, and SNR:
-    //std::cout << "number of raw targets: " << msg.raw_targets.size() << std::endl;
     std::vector<radar_ros_interface::RadarTarget> targets;
     for( auto it = msg.raw_targets.begin(); it != msg.raw_targets.end(); ++it )
     {
@@ -411,8 +373,6 @@ void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
         double rel_speed = ( tf_sensor_to_world.linear().inverse()
                 * Eigen::Vector3d( base_vel_.segment( 0, 3 ) ) )( 0 )
                            + it->speed;
-        //std::cout << "car speed: " << ( tf_sensor_to_world.linear().inverse()
-        //       * Eigen::Vector3d( base_vel_.segment( 0, 3 ) ) )( 0 ) << " target speed: " << it->speed << " rel_speed: " << rel_speed << std::endl;
         if( ( std::abs( rel_speed ) < rel_speed_thresh ) && ( it->range < max_r )
             && ( it->snr >= min_snr ) )
         {
@@ -446,7 +406,6 @@ void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
         if( ( dec_ind_ % dec_rate ) == 0 )
         {
             // Update the log-odds map:
-            //std::cout << "msg frame id: " << msg.header.frame_id << std::endl;
             inverseSensorModel( targets, tf_sensor_to_world );
         }
         ++dec_ind_;
