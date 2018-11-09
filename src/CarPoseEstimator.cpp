@@ -153,7 +153,7 @@ void CarPoseEstimator::computeSensorFOV( const Eigen::Affine3d &tf_sensor_to_wor
 }
 
 void CarPoseEstimator::inverseSensorModel(
-        const std::vector<radar_ros_interface::RadarTarget> &targets,
+        const std::vector<radar_sensor_msgs::RadarTarget> &targets,
         const Eigen::Affine3d &tf_sensor_to_world )
 {
     // Compute particle weights from current measurements:
@@ -313,10 +313,10 @@ void CarPoseEstimator::processModel( double speed, double steer_angle, double dt
     pose.translation() += dt * vel.segment( 0, 3 );
 }
 
-void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
+void CarPoseEstimator::updatePose( const car_data_interface::CarData &msg )
 {
     // Copy the message in case we want to modify it:
-    radar_slam::CarData car_data_msg = msg;
+    car_data_interface::CarData car_data_msg = msg;
 
     // Update the timestep, handling first time carefully:
     ros::Time time_now = ros::Time::now();
@@ -327,10 +327,16 @@ void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
     }
     dt_ = ( time_now - time_prev_ ).toSec();
 
+    // Compute average ROUGH wheel speed from message:
+    double speed = 0.25 * ( car_data_msg.rough_wheel_speeds.speed_FL +
+			    car_data_msg.rough_wheel_speeds.speed_FR +
+			    car_data_msg.rough_wheel_speeds.speed_RL +
+			    car_data_msg.rough_wheel_speeds.speed_RR );
+    
     // Update orientation using speed and steering angle:
     if( map_detections_only )
     {
-        processModel( car_data_msg.speed, car_data_msg.steer_angle, dt_, base_pose_, base_vel_,
+        processModel( speed, car_data_msg.steer_sensors.steer_angle, dt_, base_pose_, base_vel_,
                       base_yaw_, true );
     }
     else
@@ -339,7 +345,7 @@ void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
         {
             for( int i = 0; i < num_particles; ++i )
             {
-                processModel( car_data_msg.speed, car_data_msg.steer_angle, dt_,
+                processModel( speed, car_data_msg.steer_sensors.steer_angle, dt_,
                               particle_pose_.at( i ),
                               particle_vel_.at( i ),
                               particle_yaw_.at( i ), false );
@@ -347,7 +353,7 @@ void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
         }
         else // propagate only the base pose through the process model:
         {
-            processModel( car_data_msg.speed, car_data_msg.steer_angle, dt_, base_pose_, base_vel_,
+            processModel( speed, car_data_msg.steer_sensors.steer_angle, dt_, base_pose_, base_vel_,
                           base_yaw_, true );
         }
     }
@@ -355,14 +361,14 @@ void CarPoseEstimator::updatePose( const radar_slam::CarData &msg )
     time_prev_ = time_now;
 }
 
-void CarPoseEstimator::updateMap( const radar_ros_interface::RadarData &msg )
+void CarPoseEstimator::updateMap( const radar_sensor_msgs::RadarData &msg )
 {
     // Get the data frame ID and look up the corresponding tf transform:
     Eigen::Affine3d tf_sensor_to_world = tf2::transformToEigen(
             buffer_tf_.lookupTransform( "base_link", msg.header.frame_id, ros::Time( 0 ) ) );
 
     // Filter out targets based on range, relative speed, and SNR:
-    std::vector<radar_ros_interface::RadarTarget> targets;
+    std::vector<radar_sensor_msgs::RadarTarget> targets;
     for( auto it = msg.raw_targets.begin(); it != msg.raw_targets.end(); ++it )
     {
         // Compute the relative speed of the target using current car pose estimate:

@@ -14,7 +14,7 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>urdf</depend>
-
+  
   <build_depend>roscpp</build_depend>
   <build_depend>can_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>
@@ -27,8 +27,8 @@
   <exec_depend>can_msgs</exec_depend>
   <exec_depend>visualization_msgs</exec_depend>
 
-  <build_depend>message_generation</build_depend>
-  <exec_depend>message_runtime</exec_depend>
+  <depend>radar_sensor_msgs</depend>
+  <depend>car_data_interface</depend>
   
   <export>
   </export>

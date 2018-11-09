@@ -27,8 +27,8 @@
 #include <sensor_msgs/Range.h>
 #include <tf2/LinearMath/Quaternion.h>
 
-#include <radar_slam/CarData.h>
-#include <radar_ros_interface/RadarData.h>
+#include <car_data_interface/CarData.h>
+#include <radar_sensor_msgs/RadarData.h>
 
 /**
  * Class for estimating the pose (for now, 2d position and yaw) of the autonomous driving testbed
@@ -71,7 +71,7 @@ public:
      *
      * @param msg The CarData message received from the node communicating to the Panda.
      */
-    void updatePose( const radar_slam::CarData &msg );
+    void updatePose( const car_data_interface::CarData &msg );
 
     /**
      * Callback for updating the local grid map and estimated base pose of the car from radar data.
@@ -83,7 +83,7 @@ public:
      *
      * @param msg The RadarData message received from a node communcating to a radar sensor.
      */
-    void updateMap( const radar_ros_interface::RadarData &msg );
+    void updateMap( const radar_sensor_msgs::RadarData &msg );
 
     /**
      * Computes the grid map indices which bound the radar's field of view.
@@ -110,7 +110,7 @@ public:
      * @param targets An array of RadarTarget objects originating from a sensor.
      * @param tf_sensor_to_world The pose in world frame of the sensor.
      */
-    void inverseSensorModel( const std::vector<radar_ros_interface::RadarTarget> &targets,
+    void inverseSensorModel( const std::vector<radar_sensor_msgs::RadarTarget> &targets,
                              const Eigen::Affine3d &tf_sensor_to_world );
 
     /**
