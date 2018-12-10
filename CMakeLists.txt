@@ -27,7 +27,12 @@ add_executable(base_tf_broadcaster_node src/base_tf_broadcaster.cpp src/CarPoseE
 add_dependencies(base_tf_broadcaster_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(base_tf_broadcaster_node ${catkin_LIBRARIES} Eigen3::Eigen)
 
-install(TARGETS base_tf_broadcaster_node
+add_executable(gps_base_tf_broadcaster_node src/gps_base_tf_broadcaster.cpp)
+add_dependencies(gps_base_tf_broadcaster_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(gps_base_tf_broadcaster_node ${catkin_LIBRARIES} Eigen3::Eigen)
+
+
+install(TARGETS base_tf_broadcaster_node gps_base_tf_broadcaster_node
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
