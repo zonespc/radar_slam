@@ -5,7 +5,7 @@
   <node name="radar_node_k79_gps" pkg="radar_ros_interface" type="radar_node_k79_gps" args="--ip 10.0.0.75 --port 1024 --frame front_right_radar_link" output="screen" required="true" />
 
   <!-- Load the car URDF for visualization and publish robot states -->
-  <arg name="model" default="$(find radar_slam)/urdf/car.urdf"/>
+  <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
@@ -15,7 +15,4 @@
 
   <!-- Run rviz -->
   <node name="rviz_gps_pose_est" pkg="rviz" type="rviz" args="-d $(arg rvizconfig_gps_pose_est)" required="true" />
-
-  <!-- Record data -->
-  <node pkg="rosbag" type="record" name="rosbag_record" args="record -o gps_pose_est -a" /> 
 </launch>
