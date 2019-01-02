@@ -24,6 +24,9 @@
   OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <thread>
+#include <mutex>
+#include <chrono>
 #include <eigen3/Eigen/Eigen>
 
 #include <ros/ros.h>
@@ -40,7 +43,7 @@ public:
   {
     // Register the callback:
     sub_gps_data_ = node_handle_.subscribe( "/gps_data", 10,
-					    &GPSPoseEstimator::updatePose,
+					    &GPSPoseEstimator::updateGPSData,
 					    this );
 
     // Initialize the pose estimate:
@@ -52,59 +55,124 @@ public:
     ned_to_world_.translation() = Eigen::Vector3d::Zero();
     ned_to_world_.linear() =
       Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY() ).toRotationMatrix();
-    
+
+    // Create and launch the pose update thread:
+    thread_ = std::unique_ptr<std::thread>( new std::thread( &GPSPoseEstimator::updatePose, this, 1000.0 ) );
+    mutex_.lock();
+    is_running_ = true;
+    mutex_.unlock();
+
+    // Set first time true for computing delta time:
     first_time_ = true;
   }
-  ~GPSPoseEstimator(){}
   
-  void updatePose( const radar_sensor_msgs::GPSData &msg )
+  ~GPSPoseEstimator()
   {
-    // Compute the dt:
-    if( first_time_ )
-      {
-	gps_time_prev_ = msg.gps_time;
-	first_time_ = false;
-      }
-    double dt = msg.gps_time - gps_time_prev_;
-    Eigen::Vector3d vel_ned = Eigen::Vector3d( msg.velocity_ned.x,
-					       msg.velocity_ned.y,
-					       0.0 );
+    mutex_.lock();
+    is_running_ = false;
+    mutex_.unlock();
 
-    // Transform the GPS velocity from NED to world frame:
-    Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
-    
-    // Integrate the estimated pose:
-    base_pose_.translation() += dt * vel_world;
-
-    // Compute the yaw angle from velocity direction when moving:
-    if( vel_world.norm() >= 0.1 )
-      {
-	base_pose_.linear() =
-	  Eigen::AngleAxisd( atan2( vel_world(1), vel_world(0) ), Eigen::Vector3d::UnitZ() ).toRotationMatrix();
-     }
-    
-    // Send the updated base pose transform:
-    geometry_msgs::TransformStamped pose_tf;
-    ros::Time time_now = ros::Time::now();
-    pose_tf = tf2::eigenToTransform( base_pose_ );
-    pose_tf.header.stamp = time_now;
-    pose_tf.child_frame_id = "chassis";
-    pose_tf.header.frame_id = "base_link";
-    bcast_tf_.sendTransform( pose_tf );
-
-    // Store the GPS time:
-    gps_time_prev_ = msg.gps_time;
+    thread_->join();
   }
+  
+  void updateGPSData( const radar_sensor_msgs::GPSData &msg )
+  {
+    mutex_.lock();
+    gps_msg_ = msg;
+    mutex_.unlock();
+  }
+
+  void updatePose( double freq )
+  {
+    // Local variables:
+    radar_sensor_msgs::GPSData msg;
+    Eigen::Vector3d vel_ned_prev = Eigen::Vector3d::Zero();
+    Eigen::Vector3d vel_ned;
+    double alpha = 0.1;
+    
+    // Compute the sleep interval from freq, in ms:
+    unsigned int interval = static_cast<unsigned int>( 1000.0 / freq );
+
+    // Enter the main loop:
+    bool running = true;
+    while( running && !ros::isShuttingDown() )
+      {
+	// Compute the time to sleep until to maintain freq:
+	auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds( interval );
+	
+	// Compute the dt:
+	if( first_time_ )
+	  {
+	    time_prev_ = std::chrono::steady_clock::now();
+	    first_time_ = false;
+	  }
+
+	// Get the latest GPS data:
+	mutex_.lock();
+	msg = gps_msg_;
+	mutex_.unlock();
+
+	// Compute the actual delta time:
+	auto time_now = std::chrono::steady_clock::now();
+	double dt = std::chrono::duration_cast<std::chrono::duration<double>>( time_now - time_prev_ ).count();
+
+	// Get the latest GPS data and low pass filter it:
+	vel_ned = alpha * Eigen::Vector3d( msg.velocity_ned.x,
+					   msg.velocity_ned.y,
+					   0.0 ) + ( 1.0 - alpha ) * vel_ned;
+	
+	// Transform the GPS velocity from NED to world frame:
+	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
+    
+	// Integrate the estimated pose:
+	base_pose_.translation() += dt * vel_world;
+
+	// Compute the yaw angle from velocity direction when moving:
+	if( vel_world.norm() >= 0.1 )
+	  {
+	    base_pose_.linear() =
+	      Eigen::AngleAxisd( atan2( vel_world(1), vel_world(0) ), Eigen::Vector3d::UnitZ() ).toRotationMatrix();
+	  }
+    
+	// Send the updated base pose transform:
+	geometry_msgs::TransformStamped pose_tf;
+	pose_tf = tf2::eigenToTransform( base_pose_ );
+	pose_tf.header.stamp = ros::Time::now();
+	pose_tf.child_frame_id = "chassis";
+	pose_tf.header.frame_id = "base_link";
+	bcast_tf_.sendTransform( pose_tf );
+
+	// Store the current time and velocity:
+	time_prev_ = time_now;
+	vel_ned_prev = Eigen::Vector3d( msg.velocity_ned.x,
+					msg.velocity_ned.y,
+					0.0 );
+	
+	// Check whether the data loop should still be running:
+	mutex_.lock();
+	running = is_running_;
+	mutex_.unlock();
+
+	// Sleep to maintain desired freq:
+	std::this_thread::sleep_until( t );
+      }
+  }
+    
   
 private:
   ros::NodeHandle node_handle_;
   ros::Subscriber sub_gps_data_;
+  radar_sensor_msgs::GPSData gps_msg_;
   
   Eigen::Affine3d ned_to_world_;
   Eigen::Affine3d base_pose_;
   tf2_ros::TransformBroadcaster bcast_tf_;
+
+  bool is_running_;
+  std::unique_ptr<std::thread> thread_;
+  std::mutex mutex_;
   
-  double gps_time_prev_;
+  std::chrono::time_point<std::chrono::steady_clock> time_prev_;
   bool first_time_;
 
 };
