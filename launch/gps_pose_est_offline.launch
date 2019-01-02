@@ -1,10 +1,13 @@
 <launch>  
+  <!-- Set to use simulated time -->
+  <param name="use_sim_time" value="true" />	  
+
   <node name="gps_base_tf_broadcaster_node" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" />
 
   <node name="data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_node" args="--topic k79_data" />
   
   <!-- Load the car URDF for visualization and publish robot states -->
-  <arg name="model" default="$(find radar_slam)/urdf/car.urdf"/>
+  <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
   <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
@@ -16,6 +19,6 @@
   <node name="rviz_gps_pose_est" pkg="rviz" type="rviz" output="screen" args="-d $(arg rvizconfig_gps_pose_est)" />
 
   <!-- Run the node to publish car data messages -->
-  <node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/bagfiles/gps_k79_data_12_7_2018.bag" />
+  <node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/bagfiles/gps_k79_data_12_19_2018.bag" />
 
 </launch>
