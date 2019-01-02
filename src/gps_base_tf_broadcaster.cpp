@@ -52,64 +52,10 @@ public:
     ned_to_world_.translation() = Eigen::Vector3d::Zero();
     ned_to_world_.linear() =
       Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY() ).toRotationMatrix();
-
     
     first_time_ = true;
   }
   ~GPSPoseEstimator(){}
-
-  /**
-   * Normalizes an angle to [-PI,PI).
-   *
-   * @param x The input angle to be constrained to the range
-   * @return The output constrained angle
-   */
-  inline double constrainAngle( double x )
-  {
-    x = fmod( x + M_PI, 2.0 * M_PI );
-    if( x < 0 )
-      x += 2.0 * M_PI;
-    return x - M_PI;
-  }
-
-  /**
-   *
-   * Converts an angle to [-2*PI,2*PI].
-   *
-   * @param angle The input angle to be converted
-   * @return The output converted angle
-   */
-  inline double angleConv( double angle )
-  {
-    return fmod( constrainAngle( angle ), 2.0 * M_PI );
-  }
-
-  /**
-   * Computes the difference between successive angles a and b.
-   *
-   * @param a The first angle, in radians
-   * @param b The second angle, in radians
-   * @return The difference between angles, in radians
-   */
-  inline double angleDiff( double a, double b )
-  {
-    double dif = fmod( b - a + M_PI, 2.0 * M_PI );
-    if( dif < 0 )
-      dif += 2.0 * M_PI;
-    return dif - M_PI;
-  }
-
-  /**
-   * Unwraps an angle using its previous and new values.
-   *
-   * @param previousAngle Previous unwrapped angle, in radians
-   * @param newAngle New wrapped angle, in radians
-   * @return The new unwrapped angle, in radians
-   */
-  inline double unwrap( double previousAngle, double newAngle )
-  {
-    return previousAngle - angleDiff( newAngle, angleConv( previousAngle ) );
-  }
   
   void updatePose( const radar_sensor_msgs::GPSData &msg )
   {
@@ -133,9 +79,8 @@ public:
     // Compute the yaw angle from velocity direction when moving:
     if( vel_world.norm() >= 0.1 )
       {
-	yaw_unwrpd_ = unwrap( yaw_unwrpd_, atan2( vel_world(1), vel_world(0) ) );
 	base_pose_.linear() =
-	  Eigen::AngleAxisd( yaw_unwrpd_, Eigen::Vector3d::UnitZ() ).toRotationMatrix();
+	  Eigen::AngleAxisd( atan2( vel_world(1), vel_world(0) ), Eigen::Vector3d::UnitZ() ).toRotationMatrix();
      }
     
     // Send the updated base pose transform:
@@ -157,7 +102,6 @@ private:
   
   Eigen::Affine3d ned_to_world_;
   Eigen::Affine3d base_pose_;
-  double yaw_unwrpd_;
   tf2_ros::TransformBroadcaster bcast_tf_;
   
   double gps_time_prev_;
