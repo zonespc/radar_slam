@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   visualization_msgs
   tf2
   tf2_ros
+  radar_ros_interface
   radar_sensor_msgs
   car_data_interface
 )

@@ -33,6 +33,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_eigen/tf2_eigen.h>
+#include <geometry_msgs/Twist.h>
 
 #include <radar_sensor_msgs/GPSData.h>
 
@@ -62,6 +63,9 @@ public:
     is_running_ = true;
     mutex_.unlock();
 
+    // Initialize the car velocity publisher:
+    pub_car_vel_ = node_handle_.advertise<geometry_msgs::Twist>( "car_vel", 10 );
+    
     // Set first time true for computing delta time:
     first_time_ = true;
   }
@@ -103,7 +107,7 @@ public:
 	// Compute the dt:
 	if( first_time_ )
 	  {
-	    time_prev_ = std::chrono::steady_clock::now();
+	    time_prev_ = ros::Time::now();
 	    first_time_ = false;
 	  }
 
@@ -113,8 +117,8 @@ public:
 	mutex_.unlock();
 
 	// Compute the actual delta time:
-	auto time_now = std::chrono::steady_clock::now();
-	double dt = std::chrono::duration_cast<std::chrono::duration<double>>( time_now - time_prev_ ).count();
+	ros::Time time_now = ros::Time::now();
+	double dt = ( time_now - time_prev_ ).toSec();
 
 	// Get the latest GPS data and low pass filter it:
 	vel_ned = alpha * Eigen::Vector3d( msg.velocity_ned.x,
@@ -123,7 +127,7 @@ public:
 	
 	// Transform the GPS velocity from NED to world frame:
 	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
-    
+	
 	// Integrate the estimated pose:
 	base_pose_.translation() += dt * vel_world;
 
@@ -142,6 +146,12 @@ public:
 	pose_tf.header.frame_id = "base_link";
 	bcast_tf_.sendTransform( pose_tf );
 
+	// Publish the car velocity:
+	geometry_msgs::Twist car_vel_msg;
+	tf2::toMsg( vel_world, car_vel_msg.linear );
+	tf2::toMsg( Eigen::Vector3d::Zero(), car_vel_msg.angular );
+	pub_car_vel_.publish( car_vel_msg ); 
+	
 	// Store the current time and velocity:
 	time_prev_ = time_now;
 	vel_ned_prev = Eigen::Vector3d( msg.velocity_ned.x,
@@ -163,6 +173,8 @@ private:
   ros::NodeHandle node_handle_;
   ros::Subscriber sub_gps_data_;
   radar_sensor_msgs::GPSData gps_msg_;
+
+  ros::Publisher pub_car_vel_;
   
   Eigen::Affine3d ned_to_world_;
   Eigen::Affine3d base_pose_;
@@ -172,7 +184,7 @@ private:
   std::unique_ptr<std::thread> thread_;
   std::mutex mutex_;
   
-  std::chrono::time_point<std::chrono::steady_clock> time_prev_;
+  ros::Time time_prev_;
   bool first_time_;
 
 };

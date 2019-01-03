@@ -1,0 +1,1 @@
+rel_speed_thresh: 0.75 # threshold for filtering out moving targets based on relative speed

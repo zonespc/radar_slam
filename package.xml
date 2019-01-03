@@ -28,6 +28,7 @@
   <exec_depend>visualization_msgs</exec_depend>
 
   <depend>radar_sensor_msgs</depend>
+  <depend>radar_ros_interface</depend>
   <depend>car_data_interface</depend>
   
   <export>
