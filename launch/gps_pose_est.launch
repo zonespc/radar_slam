@@ -1,4 +1,9 @@
 <launch>  
+  <!-- Run the usb_cam node for capturing webcam footage -->
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+      <param name="video_device" value="/dev/video1" />
+  </node>
+
   <!-- Load YAML params and run the node to estimate the car pose and publish it -->
   <rosparam command="load" file="$(find radar_slam)/config/gps_pose_est.yaml" />
   <node name="gps_base_tf_broadcaster_node" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" />
