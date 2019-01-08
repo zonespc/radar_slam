@@ -22,6 +22,6 @@
   <node name="rviz_test_car_pose_est" pkg="rviz" type="rviz" args="-d $(arg rvizconfig_test_car_pose_est)" required="true" />
 
   <!-- Run the node to publish car data messages -->
-  <node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/bagfiles/parking_lot_car_radar.bag"/>
+  <node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/bagfiles/gps_k79_data_12_19_2018.bag"/>
 
 </launch>
