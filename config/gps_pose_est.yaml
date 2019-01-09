@@ -1,4 +1,4 @@
-heading_lpf: 0.01
+heading_lpf: 0.5
 rel_speed_thresh: 0.5 # threshold for filtering out moving targets based on relative speed
 min_dist_thresh: 3.0 # threshold for filtering close targets (issue with old firmware)
 max_dist_thresh: 15.0 # threshold for filtering close targets (issue with old firmware)
