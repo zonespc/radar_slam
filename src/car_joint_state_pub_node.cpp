@@ -26,7 +26,6 @@
 
 #include <thread>
 #include <mutex>
-#include <chrono>
 #include <eigen3/Eigen/Eigen>
 
 #include <ros/ros.h>
@@ -99,16 +98,13 @@ public:
     Eigen::Vector3d vel_ned;
     double alpha = 0.1;
     
-    // Compute the sleep interval from freq, in ms:
-    unsigned int interval = static_cast<unsigned int>( 1000.0 / freq );
-
+    // Create ROS rate for running at desired frequency:
+    ros::Rate publish_loop_rate( freq );
+    
     // Enter the main loop:
     bool running = true;
-    while( running && !ros::isShuttingDown() )
+    while( running && ros::ok() && !ros::isShuttingDown() )
       {
-	// Compute the time to sleep until to maintain freq:
-	auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds( interval );
-	
 	// Compute the dt:
 	if( first_time_ )
 	  {
@@ -129,8 +125,8 @@ public:
 	joint_state_msg_.position.at( STEER_WHEEL ) = -( M_PI / 180.0 ) * msg.steer_sensors.steer_angle;
 
 	// Set the steering angle for the front wheels:
-	joint_state_msg_.position.at( FL_STEER ) = ( M_PI / 180.0 ) * ( msg.steer_sensors.steer_angle / steering_ratio_ );
-	joint_state_msg_.position.at( FR_STEER ) = ( M_PI / 180.0 ) * ( msg.steer_sensors.steer_angle / steering_ratio_ );
+	joint_state_msg_.position.at( FL_STEER ) = -( M_PI / 180.0 ) * ( msg.steer_sensors.steer_angle / steering_ratio_ );
+	joint_state_msg_.position.at( FR_STEER ) = -( M_PI / 180.0 ) * ( msg.steer_sensors.steer_angle / steering_ratio_ );
 
 	// Compute the wheel instantaneous rotation rate (velocity):
 	joint_state_msg_.velocity.at( FL_WHEEL ) = msg.rough_wheel_speeds.speed_FL / wheel_radius_;
@@ -157,7 +153,7 @@ public:
 	mutex_.unlock();
 
 	// Sleep to maintain desired freq:
-	std::this_thread::sleep_until( t );
+	publish_loop_rate.sleep();
       }
   }
 

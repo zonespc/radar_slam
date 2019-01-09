@@ -1,3 +1,6 @@
-rel_speed_thresh: 1.0 # threshold for filtering out moving targets based on relative speed
+heading_lpf: 0.01
+rel_speed_thresh: 0.5 # threshold for filtering out moving targets based on relative speed
+min_dist_thresh: 3.0 # threshold for filtering close targets (issue with old firmware)
+max_dist_thresh: 15.0 # threshold for filtering close targets (issue with old firmware)
 steering_ratio: 18.61
 wheel_radius: 0.31242 # 24.6in diameter tire 

@@ -233,7 +233,7 @@
     <parent link="fl_axle"/>
     <child link="front_left_wheel"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
-    <axis xyz="1 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
   <!-- FRONT RIGHT AXLE TO FRONT RIGHT WHEEL JOINT -->
@@ -241,7 +241,7 @@
     <parent link="fr_axle"/>
     <child link="front_right_wheel"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
-    <axis xyz="1 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
   <!-- REAR LEFT AXLE TO REAR LEFT WHEEL JOINT -->
@@ -249,7 +249,7 @@
     <parent link="chassis"/>
     <child link="rear_left_wheel"/>
     <origin xyz="-1.45 0.793 0.3" rpy="0 0 0"/>
-    <axis xyz="1 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
   <!-- REAR RIGHT AXLE TO REAR RIGHT WHEEL JOINT -->
@@ -257,7 +257,7 @@
     <parent link="chassis"/>
     <child link="rear_right_wheel"/>
     <origin xyz="-1.45 -0.793 0.3" rpy="0 0 0"/>
-    <axis xyz="1 0 0"/>
+    <axis xyz="0 1 0"/>
   </joint>
 
   <!-- SENSOR LINKS AND FIXED JOINTS -->
@@ -285,7 +285,7 @@
   <joint name="front_left_radar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="front_left_radar_link"/>
-    <origin xyz="2.2 0.7 0.4" rpy="0 0 ${(pi/180)*40}"/>
+    <origin xyz="2.2 0.7 0.4" rpy="0 0 ${(pi/180)*90}"/>
   </joint>
 
   <!-- FRONT RIGHT RADAR LINK -->
@@ -311,7 +311,7 @@
   <joint name="rear_left_radar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="rear_left_radar_link"/>
-    <origin xyz="-2.5 0.7 0.4" rpy="0 0 ${(pi/180)*(180-40)}"/>
+    <origin xyz="-2.5 0.7 0.4" rpy="0 0 ${(pi/180)*(90)}"/>
   </joint>
 
   <!-- REAR RIGHT RADAR LINK -->

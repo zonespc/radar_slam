@@ -26,7 +26,6 @@
 
 #include <thread>
 #include <mutex>
-#include <chrono>
 #include <eigen3/Eigen/Eigen>
 
 #include <ros/ros.h>
@@ -47,6 +46,9 @@ public:
 					    &GPSPoseEstimator::updateGPSData,
 					    this );
 
+    // Get the heading LPF coefficient:
+    node_handle_.param( "heading_lpf", alpha_, 0.1 );
+    
     // Initialize the pose estimate:
     base_pose_.translation() = Eigen::Vector3d::Zero();
     base_pose_.linear() =
@@ -92,18 +94,14 @@ public:
     radar_sensor_msgs::GPSData msg;
     Eigen::Vector3d vel_ned_prev = Eigen::Vector3d::Zero();
     Eigen::Vector3d vel_ned;
-    double alpha = 0.1;
-    
-    // Compute the sleep interval from freq, in ms:
-    unsigned int interval = static_cast<unsigned int>( 1000.0 / freq );
 
+    // Create ROS rate for running at desired frequency:
+    ros::Rate update_pose_rate( freq );
+    
     // Enter the main loop:
     bool running = true;
-    while( running && !ros::isShuttingDown() )
+    while( running && ros::ok() && !ros::isShuttingDown() )
       {
-	// Compute the time to sleep until to maintain freq:
-	auto t = std::chrono::steady_clock::now() + std::chrono::milliseconds( interval );
-	
 	// Compute the dt:
 	if( first_time_ )
 	  {
@@ -121,9 +119,9 @@ public:
 	double dt = ( time_now - time_prev_ ).toSec();
 
 	// Get the latest GPS data and low pass filter it:
-	vel_ned = alpha * Eigen::Vector3d( msg.velocity_ned.x,
+	vel_ned = alpha_ * Eigen::Vector3d( msg.velocity_ned.x,
 					   msg.velocity_ned.y,
-					   0.0 ) + ( 1.0 - alpha ) * vel_ned;
+					   0.0 ) + ( 1.0 - alpha_ ) * vel_ned;
 	
 	// Transform the GPS velocity from NED to world frame:
 	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
@@ -164,7 +162,7 @@ public:
 	mutex_.unlock();
 
 	// Sleep to maintain desired freq:
-	std::this_thread::sleep_until( t );
+	update_pose_rate.sleep();	
       }
   }
     
@@ -174,6 +172,8 @@ private:
   ros::Subscriber sub_gps_data_;
   radar_sensor_msgs::GPSData gps_msg_;
 
+  double alpha_;
+  
   ros::Publisher pub_car_vel_;
   
   Eigen::Affine3d ned_to_world_;
