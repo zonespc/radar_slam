@@ -68,7 +68,7 @@ public:
     joint_state_msg_.velocity.resize( 7 );
     std::fill( joint_state_msg_.velocity.begin(), joint_state_msg_.velocity.end(), 0.0 );
     
-    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 10 );
+    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
 
     // Set first time true for computing delta time:
     first_time_ = true;

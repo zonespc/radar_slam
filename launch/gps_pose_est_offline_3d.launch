@@ -3,12 +3,12 @@
   <param name="use_sim_time" value="true" />	  
 
   <!-- Load YAML params and run the node to estimate the car pose and publish it -->
-  <rosparam command="load" file="$(find radar_slam)/config/gps_pose_est.yaml" />
+  <rosparam command="load" file="$(find radar_slam)/config/gps_pose_est_3d.yaml" />
   <node name="gps_base_tf_broadcaster_node" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" />
 
   <!-- Run the point cloud visualization nodes -->
-  <node name="front_right_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic front_right_radar_data" />
-  <node name="rear_left_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic rear_left_radar_data" />
+  <node name="front_right_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_3d_rotated_node" args="--topic front_right_radar_data" />
+  <node name="rear_left_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_3d_rotated_node" args="--topic rear_left_radar_data" />
   
   <!-- Load the car URDF for visualization and publish robot states -->
   <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
@@ -28,6 +28,6 @@
   <node name="rviz_gps_pose_est" pkg="rviz" type="rviz" output="screen" args="-d $(arg rvizconfig_gps_pose_est)" />
 
   <!-- Run the node to publish car data messages -->
-  <node pkg="rosbag" type="play" name="player" output="screen" args="--rate=2.0 --clock /home/nrotella/bagfiles/long.bag" />
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--rate=2.0 --clock /home/nrotella/bagfiles/rotated.bag" />
   
 </launch>
