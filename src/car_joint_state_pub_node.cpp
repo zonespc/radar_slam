@@ -45,7 +45,10 @@ public:
     // Get parameters:
     node_handle_.getParam( "steering_ratio", steering_ratio_ );
     node_handle_.getParam( "wheel_radius", wheel_radius_ );
-    
+
+    // Initialize the joint state publisher:
+    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
+
     // Create and launch the pose update thread:
     thread_ = std::unique_ptr<std::thread>( new std::thread( &CarJointStatePub::publishLoop, this, 1000.0 ) );
     mutex_.lock();
@@ -67,8 +70,6 @@ public:
 
     joint_state_msg_.velocity.resize( 7 );
     std::fill( joint_state_msg_.velocity.begin(), joint_state_msg_.velocity.end(), 0.0 );
-    
-    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
 
     // Set first time true for computing delta time:
     first_time_ = true;
