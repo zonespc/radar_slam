@@ -46,9 +46,6 @@ public:
     node_handle_.getParam( "steering_ratio", steering_ratio_ );
     node_handle_.getParam( "wheel_radius", wheel_radius_ );
 
-    // Initialize the joint state publisher:
-    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
-
     // Create and launch the pose update thread:
     thread_ = std::unique_ptr<std::thread>( new std::thread( &CarJointStatePub::publishLoop, this, 1000.0 ) );
     mutex_.lock();
@@ -70,9 +67,6 @@ public:
 
     joint_state_msg_.velocity.resize( 7 );
     std::fill( joint_state_msg_.velocity.begin(), joint_state_msg_.velocity.end(), 0.0 );
-
-    // Set first time true for computing delta time:
-    first_time_ = true;
   }
   
   ~CarJointStatePub()
@@ -95,9 +89,11 @@ public:
   {
     // Local variables:
     car_data_interface::CarData msg;
-    Eigen::Vector3d vel_ned_prev = Eigen::Vector3d::Zero();
-    Eigen::Vector3d vel_ned;
-    double alpha = 0.1;
+    ros::Time time_prev;
+    bool first_time = true;
+
+    // Initialize the joint state publisher:
+    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
     
     // Create ROS rate for running at desired frequency:
     ros::Rate publish_loop_rate( freq );
@@ -107,10 +103,15 @@ public:
     while( running && ros::ok() && !ros::isShuttingDown() )
       {
 	// Compute the dt:
-	if( first_time_ )
+	if( first_time )
 	  {
-	    time_prev_ = ros::Time::now();
-	    first_time_ = false;
+	    time_prev = ros::Time::now();
+	    
+	    // Wait for simulated clock to start:
+	    if( time_prev.toSec() > 0.0 )
+	      {
+		first_time = false;
+	      }
 	  }
 
 	// Get the latest car data:
@@ -120,7 +121,7 @@ public:
 
 	// Compute the actual delta time:
 	ros::Time time_now = ros::Time::now();
-	double dt = ( time_now - time_prev_ ).toSec();
+	double dt = ( time_now - time_prev ).toSec();
 
 	// Set steering wheel angle (convert to radians):
 	joint_state_msg_.position.at( STEER_WHEEL ) = -( M_PI / 180.0 ) * msg.steer_sensors.steer_angle;
@@ -146,7 +147,7 @@ public:
 	pub_joint_state_.publish( joint_state_msg_ ); 
 	
 	// Store the current time:
-	time_prev_ = time_now;
+	time_prev = time_now;
 	
 	// Check whether the data loop should still be running:
 	mutex_.lock();
@@ -180,9 +181,6 @@ private:
   bool is_running_;
   std::unique_ptr<std::thread> thread_;
   std::mutex mutex_;
-  
-  ros::Time time_prev_;
-  bool first_time_;
 
 };
 

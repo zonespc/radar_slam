@@ -59,17 +59,12 @@ public:
     ned_to_world_.linear() =
       Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY() ).toRotationMatrix();
 
-    // Initialize the car velocity publisher:
-    pub_car_vel_ = node_handle_.advertise<geometry_msgs::Twist>( "car_vel", 10 );
-
     // Create and launch the pose update thread:
     thread_ = std::unique_ptr<std::thread>( new std::thread( &GPSPoseEstimator::updatePose, this, 1000.0 ) );
     mutex_.lock();
     is_running_ = true;
     mutex_.unlock();
-
-    // Set first time true for computing delta time:
-    first_time_ = true;
+    
   }
   
   ~GPSPoseEstimator()
@@ -92,9 +87,14 @@ public:
   {
     // Local variables:
     radar_sensor_msgs::GPSData msg;
-    Eigen::Vector3d vel_ned_prev = Eigen::Vector3d::Zero();
-    Eigen::Vector3d vel_ned;
+    Eigen::Vector3d vel_ned = Eigen::Vector3d::Zero();
+    bool first_time = true;  
+    ros::Time time_now, time_prev;
+    double dt;
 
+    // Initialize the car velocity publisher:
+    pub_car_vel_ = node_handle_.advertise<geometry_msgs::Twist>( "car_vel", 1000 );
+    
     // Create ROS rate for running at desired frequency:
     ros::Rate update_pose_rate( freq );
     
@@ -103,10 +103,15 @@ public:
     while( running && ros::ok() && !ros::isShuttingDown() )
       {
 	// Compute the dt:
-	if( first_time_ )
+	if( first_time )
 	  {
-	    time_prev_ = ros::Time::now();
-	    first_time_ = false;
+	    time_prev = ros::Time::now();
+
+	    // Wait for simulated clock to start:
+	    if( time_prev.toSec() > 0.0 )
+	      {
+		first_time = false;
+	      }
 	  }
 
 	// Get the latest GPS data:
@@ -115,20 +120,20 @@ public:
 	mutex_.unlock();
 
 	// Compute the actual delta time:
-	ros::Time time_now = ros::Time::now();
-	double dt = ( time_now - time_prev_ ).toSec();
+	time_now = ros::Time::now();
+	dt = ( time_now - time_prev ).toSec();
 
-	// Get the latest GPS data and low pass filter it:
+	// Get the latest GPS velocity and low pass filter it, ignoring z for now:
 	vel_ned = alpha_ * Eigen::Vector3d( msg.velocity_ned.x,
-					   msg.velocity_ned.y,
-					   0.0 ) + ( 1.0 - alpha_ ) * vel_ned;
+					    msg.velocity_ned.y,
+					    0.0 ) + ( 1.0 - alpha_ ) * vel_ned;
 	
 	// Transform the GPS velocity from NED to world frame:
 	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
 	
 	// Integrate the estimated pose:
 	base_pose_.translation() += dt * vel_world;
-
+	
 	// Compute the yaw angle from velocity direction when moving:
 	if( vel_world.norm() >= 0.1 )
 	  {
@@ -151,10 +156,7 @@ public:
 	pub_car_vel_.publish( car_vel_msg ); 
 	
 	// Store the current time and velocity:
-	time_prev_ = time_now;
-	vel_ned_prev = Eigen::Vector3d( msg.velocity_ned.x,
-					msg.velocity_ned.y,
-					0.0 );
+	time_prev = time_now;
 	
 	// Check whether the data loop should still be running:
 	mutex_.lock();
@@ -183,9 +185,6 @@ private:
   bool is_running_;
   std::unique_ptr<std::thread> thread_;
   std::mutex mutex_;
-  
-  ros::Time time_prev_;
-  bool first_time_;
 
 };
 

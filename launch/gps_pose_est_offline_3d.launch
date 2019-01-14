@@ -7,8 +7,8 @@
   <node name="gps_base_tf_broadcaster_node" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" />
 
   <!-- Run the point cloud visualization nodes -->
-  <node name="front_right_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_3d_rotated_node" args="--topic front_right_radar_data" />
-  <node name="rear_left_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_3d_rotated_node" args="--topic rear_left_radar_data" />
+  <node name="front_right_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic front_right_radar_data" />
+  <node name="rear_left_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic rear_left_radar_data" />
   
   <!-- Load the car URDF for visualization and publish robot states -->
   <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
