@@ -4,15 +4,18 @@
       <param name="video_device" value="/dev/video1" />
   </node>
 
+  <!-- Run the Piksi Multi rover ROS node -->
+  <include file="$(find piksi_multi_rtk_ros)/launch/piksi_multi_rover.launch" />
+  
   <!-- Load YAML params and run the node to estimate the car pose and publish it -->
   <rosparam command="load" file="$(find radar_slam)/config/gps_pose_est.yaml" />
   <node name="gps_base_tf_broadcaster_node" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" />
 
-  <!-- Run the radar interface node for the K79 with GPS and visualize data -->
+  <!-- Run the radar interface node for the front right K79 visualize data -->
   <node name="radar_node_front_right" pkg="radar_ros_interface" type="radar_node_k79_gps" args="--ip 10.0.0.75 --port 1024 --name front_right_radar --frame front_right_radar_link" output="screen" required="true" />
   <node name="data_viz_node_front_right" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic front_right_radar_data" />
 
-  <!-- Run the radar interface node for the K79 without GPS -->
+  <!-- Run the radar interface node for the front left K79 and visualize data -->
   <node name="radar_node_front_left" pkg="radar_ros_interface" type="radar_node_k79" args="--ip 10.0.0.75 --port 1025 --name front_left_radar --frame front_left_radar_link" output="screen" required="true" />
   <node name="data_viz_node_front_left" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic front_left_radar_data" />
 

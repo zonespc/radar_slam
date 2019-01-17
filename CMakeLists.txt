@@ -12,8 +12,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf2
   tf2_ros
   radar_ros_interface
-  radar_sensor_msgs
   car_data_interface
+  radar_sensor_msgs
+  piksi_rtk_msgs
 )
 
 catkin_package()
