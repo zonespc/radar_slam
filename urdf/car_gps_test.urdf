@@ -285,7 +285,7 @@
   <joint name="front_left_radar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="front_left_radar_link"/>
-    <origin xyz="2.2 0.7 0.4" rpy="0 0 ${(pi/180)*40}"/>
+    <origin xyz="2.2 0.7 0.4" rpy="0 0 ${(pi/180)*90}"/>
   </joint>
 
   <!-- FRONT RIGHT RADAR LINK -->
@@ -311,7 +311,7 @@
   <joint name="rear_left_radar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="rear_left_radar_link"/>
-    <origin xyz="-2.5 0.7 0.4" rpy="0 0 ${(pi/180)*(180-40)}"/>
+    <origin xyz="-2.5 0.7 0.4" rpy="0 0 ${(pi/180)*(90)}"/>
   </joint>
 
   <!-- REAR RIGHT RADAR LINK -->

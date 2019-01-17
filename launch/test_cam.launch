@@ -1,0 +1,19 @@
+<launch>  
+  <!-- Run the usb_cam node for capturing webcam footage -->
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+      <param name="video_device" value="/dev/video1" />
+  </node>
+
+  <!-- Run the node to publish car data messages -->
+  <node name="car_data_pub_node" pkg="car_data_interface" type="car_data_pub_node" launch-prefix="sudo -E PYTHONPATH=$(env PYTHONPATH)" />
+  
+    <!-- Load the rviz configuration -->
+  <arg name="rvizconfig_test_cam" default="$(find radar_slam)/rviz/test_cam.rviz" />
+
+  <!-- Run rviz -->
+  <node name="rviz_test_cam" pkg="rviz" type="rviz" args="-d $(arg rvizconfig_test_cam)" required="true" />
+
+  <!-- rosbag record all topics -->
+  <node name="record" pkg="rosbag" type="record" args="-a"/>
+  
+</launch>

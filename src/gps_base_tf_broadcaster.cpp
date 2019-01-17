@@ -57,15 +57,15 @@ public:
     ned_to_world_.linear() =
       Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY() ).toRotationMatrix();
 
+    // Initialize the car velocity publisher:
+    pub_car_vel_ = node_handle_.advertise<geometry_msgs::Twist>( "car_vel", 10 );
+    
     // Create and launch the pose update thread:
     thread_ = std::unique_ptr<std::thread>( new std::thread( &GPSPoseEstimator::updatePose, this, 1000.0 ) );
     mutex_.lock();
     is_running_ = true;
     mutex_.unlock();
 
-    // Initialize the car velocity publisher:
-    pub_car_vel_ = node_handle_.advertise<geometry_msgs::Twist>( "car_vel", 10 );
-    
     // Set first time true for computing delta time:
     first_time_ = true;
   }
