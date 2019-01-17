@@ -1,11 +1,17 @@
 <launch>  
   <!-- Run the usb_cam node for capturing webcam footage -->
   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+    <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" >
       <param name="video_device" value="/dev/video1" />
+      <param name="image_width" value="1920" /> <!--1920" /> -->
+      <param name="image_height" value="1080" /> <!-- 1080" /> -->
   </node>
 
   <!-- Run the Piksi Multi rover ROS node -->
   <include file="$(find piksi_multi_rtk_ros)/launch/piksi_multi_rover.launch" />
+
+  <!-- Run the node to publish car data messages -->
+  <node name="car_data_pub_node" pkg="car_data_interface" type="car_data_pub_node" launch-prefix="sudo -E PYTHONPATH=$(env PYTHONPATH)" />
   
   <!-- Load YAML params and run the node to estimate the car pose and publish it -->
   <rosparam command="load" file="$(find radar_slam)/config/gps_pose_est.yaml" />
@@ -19,6 +25,9 @@
   <node name="radar_node_front_left" pkg="radar_ros_interface" type="radar_node_k79" args="--ip 10.0.0.75 --port 1025 --name front_left_radar --frame front_left_radar_link" output="screen" required="true" />
   <node name="data_viz_node_front_left" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic front_left_radar_data" />
 
+  <!-- Record the sensor data -->
+  <node name="recorder" pkg="rosbag" type="record" args="/front_right_radar_data /front_left_radar_data /gps_data /car_data /usb_cam/camera_info /usb_cam/image_raw/compressed -o /home/nvidia/bagfiles/gps_pose_est" />
+  
   <!-- Load the car URDF for visualization and publish robot states -->
   <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
