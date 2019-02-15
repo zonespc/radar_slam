@@ -1,0 +1,19 @@
+<launch>
+  <!-- Set to use simulated time -->
+  <param name="use_sim_time" value="true" />	  
+
+  <!-- Run the node to publish car data messages -->
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--rate=1.0 --clock /home/nrotella/bagfiles/long.bag" />
+
+  <!-- Republish compressed image data as decompressed image data -->
+  <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/usb_cam/image_raw raw out:=/usb_cam/image_raw" />
+  
+  <node pkg= "tensorflow_object_detector" name="detect_ros" type="detect_ros.py"  output="screen">
+    <remap from="image" to="/usb_cam/image_raw"/>
+  </node>
+
+  <node pkg="image_view" type="image_view" name="image_view">
+    <remap from="image" to="debug_image"/>
+  </node>
+  
+</launch>
