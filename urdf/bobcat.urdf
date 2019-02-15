@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="bobcat">
+
+  <!-- MATERIALS
+       Note: these are created using macros due to "multiple inclusion"
+       errors in xacro, which can be avoided in other ways if desired.
+  -->
+  <xacro:macro name="material_grey">
+    <material name="grey">
+      <color rgba="0.5 0.5 0.5 1.0"/>
+    </material>
+  </xacro:macro>
+
+  <xacro:macro name="material_dark_grey">
+    <material name="dark_grey">
+      <color rgba="0.15 0.15 0.15 1.0"/>
+    </material>
+  </xacro:macro>
+
+  <xacro:macro name="material_black">
+    <material name="black">
+      <color rgba="0.0 0.0 0.0 1.0"/>
+    </material>
+  </xacro:macro>
+
+  
+  <!-- LINK DEFINITIONS -->
+  
+  <!--- BASE LINK -->
+  <link name="base_link">
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <!--- CHASSIS LINK -->
+  <link name="chassis">
+    <visual>
+      <origin xyz="0 0 0" rpy="${0.5*pi} ${0.0*pi} ${0.5*pi}"/>
+      <geometry>
+        <mesh filename="package://radar_slam/meshes/bobcat.stl" scale="0.01 0.01 0.01"/>
+      </geometry>
+      <xacro:material_grey />
+    </visual>
+    <collision name="chassis">
+      <origin xyz="0.0 0.05 0.625" rpy="0 0 0"/>
+      <geometry>
+        <box size="1.7526 2.1 0.95"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- JOINT DEFINITIONS -->
+
+  <!-- BASE LINK TO CHASSIS JOINT -->
+  <joint name="base_link_connection" type="fixed">
+    <parent link="base_link"/>
+    <child link="chassis"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  
+  <!-- SENSOR LINKS AND FIXED JOINTS -->
+
+  <!-- LEFT RADAR LINK -->
+  <link name="left_radar_link">
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="${0.0*pi} ${0.0*pi} ${0.0*pi}"/>
+      <geometry>
+        <mesh filename="package://radar_slam/meshes/kanza79.stl" scale="1.0 1.0 1.0"/>
+      </geometry>
+      <xacro:material_dark_grey />
+    </visual>
+  </link>
+  <joint name="left_radar_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="left_radar_link"/>
+    <origin xyz="0.55 0.2 1.0" rpy="0 0 ${0.0*pi}"/>
+  </joint>
+
+  <!-- RIGHT RADAR LINK -->
+  <link name="right_radar_link">
+    <inertial>
+      <mass value="1"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="${0.0*pi} ${0.0*pi} ${0.0*pi}"/>
+      <geometry>
+        <mesh filename="package://radar_slam/meshes/kanza79.stl" scale="1.0 1.0 1.0"/>
+      </geometry>
+      <xacro:material_dark_grey />
+    </visual>
+  </link>
+  <joint name="right_radar_joint" type="fixed">
+    <parent link="chassis"/>
+    <child link="right_radar_link"/>
+    <origin xyz="-0.55 0.2 1.0" rpy="0 0 ${1.0*pi}"/>
+  </joint>
+
+</robot>

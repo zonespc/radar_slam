@@ -1,0 +1,15 @@
+<launch>
+  <!-- Load the URDF for visualization and publish robot states -->
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
+
+  <!-- Run the robot state publisher -->
+  <param name="use_gui" value="true"/>
+  <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+
+    <!-- Load the rviz configuration -->
+  <arg name="rvizconfig_view_urdf" default="$(find radar_slam)/rviz/view_urdf.rviz" />
+
+  <!-- Run Rviz with loaded configuration-->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(arg rvizconfig_view_urdf)" />
+</launch>
