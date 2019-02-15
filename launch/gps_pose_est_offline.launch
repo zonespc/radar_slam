@@ -20,6 +20,17 @@
   <!-- Run the car joint state publisher using car data -->
   <node name="car_joint_state_pub_node" pkg="radar_slam" type="car_joint_state_pub_node" output="screen" />
   <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" /> -->
+  
+  <!-- Republish compressed image data as decompressed image data, needed for tensorflow object detector -->
+  <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/usb_cam/image_raw raw out:=/usb_cam/image_raw" /> -->
+
+  <!-- Run tensorflow object detector. Make sure to source bin/activate in tensorflow env -->
+  <!-- <node pkg= "tensorflow_object_detector" name="detect_ros" type="detect_ros.py"  output="screen">  -->
+  <!--   <remap from="image" to="/usb_cam/image_raw"/> -->
+  <!-- </node> -->
+  <!-- <node pkg="image_view" type="image_view" name="image_view"> -->
+  <!--   <remap from="image" to="debug_image"/> -->
+  <!-- </node> -->
 
   <!-- Load the rviz configuration -->
   <arg name="rvizconfig_gps_pose_est" default="$(find radar_slam)/rviz/gps_pose_est.rviz" />
