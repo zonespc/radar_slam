@@ -33,8 +33,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <geometry_msgs/Twist.h>
-
-#include <radar_sensor_msgs/GPSData.h>
+#include <piksi_rtk_msgs/VelNed.h>
 
 class GPSPoseEstimator {
 
@@ -42,7 +41,7 @@ public:
   GPSPoseEstimator()
   {
     // Register the callback:
-    sub_gps_data_ = node_handle_.subscribe( "/gps_data", 10,
+    sub_gps_data_ = node_handle_.subscribe( "/piksi/vel_ned", 1000,
 					    &GPSPoseEstimator::updateGPSData,
 					    this );
 
@@ -76,18 +75,20 @@ public:
     thread_->join();
   }
   
-  void updateGPSData( const radar_sensor_msgs::GPSData &msg )
+  void updateGPSData( const piksi_rtk_msgs::VelNed &msg )
   {
     mutex_.lock();
-    gps_msg_ = msg;
+    gps_vel_ned_ = 0.001 * Eigen::Vector3d( static_cast<double>( msg.n ),
+					    static_cast<double>( msg.e ),
+					    static_cast<double>( msg.d ) );
     mutex_.unlock();
   }
 
   void updatePose( double freq )
   {
     // Local variables:
-    radar_sensor_msgs::GPSData msg;
     Eigen::Vector3d vel_ned = Eigen::Vector3d::Zero();
+    Eigen::Vector3d vel_ned_lpf = vel_ned; // low pass filtered
     bool first_time = true;  
     ros::Time time_now, time_prev;
     double dt;
@@ -116,20 +117,21 @@ public:
 
 	// Get the latest GPS data:
 	mutex_.lock();
-	msg = gps_msg_;
+	vel_ned = gps_vel_ned_;
 	mutex_.unlock();
+
+	// Ignore the z direction velocity for now, keep everything 2d:
+	vel_ned(2) = 0.0;
 
 	// Compute the actual delta time:
 	time_now = ros::Time::now();
 	dt = ( time_now - time_prev ).toSec();
 
 	// Get the latest GPS velocity and low pass filter it, ignoring z for now:
-	vel_ned = alpha_ * Eigen::Vector3d( msg.velocity_ned.x,
-					    msg.velocity_ned.y,
-					    0.0 ) + ( 1.0 - alpha_ ) * vel_ned;
+	vel_ned_lpf = alpha_ * vel_ned + ( 1.0 - alpha_ ) * vel_ned_lpf;
 	
 	// Transform the GPS velocity from NED to world frame:
-	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
+	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned_lpf;
 	
 	// Integrate the estimated pose:
 	base_pose_.translation() += dt * vel_world;
@@ -172,8 +174,8 @@ public:
 private:
   ros::NodeHandle node_handle_;
   ros::Subscriber sub_gps_data_;
-  radar_sensor_msgs::GPSData gps_msg_;
-
+  Eigen::Vector3d gps_vel_ned_;
+  
   double alpha_;
   
   ros::Publisher pub_car_vel_;
