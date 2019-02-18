@@ -37,7 +37,7 @@
   <!--- CHASSIS LINK -->
   <link name="chassis">
     <visual>
-      <origin xyz="0 0 0" rpy="${0.5*pi} ${0.0*pi} ${0.5*pi}"/>
+      <origin xyz="0 0 0" rpy="${0.5*pi} ${0.0*pi} ${0.0*pi}"/>
       <geometry>
         <mesh filename="package://radar_slam/meshes/bobcat.stl" scale="0.01 0.01 0.01"/>
       </geometry>
@@ -79,7 +79,7 @@
   <joint name="rear_left_radar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="rear_left_radar_link"/>
-    <origin xyz="0.55 0.2 1.0" rpy="0 0 ${0.0*pi}"/>
+    <origin xyz="0.2 0.55 1.0" rpy="0 0 ${0.5*pi}"/>
   </joint>
 
   <!-- RIGHT RADAR LINK -->
@@ -99,7 +99,7 @@
   <joint name="front_right_radar_joint" type="fixed">
     <parent link="chassis"/>
     <child link="front_right_radar_link"/>
-    <origin xyz="-0.55 0.2 1.0" rpy="0 0 ${1.0*pi}"/>
+    <origin xyz="0.2 -0.55 1.0" rpy="0 0 ${-0.5*pi}"/>
   </joint>
 
 </robot>
