@@ -6,9 +6,6 @@
   <rosparam command="load" file="$(find radar_slam)/config/radar_slam.yaml" />
   <node name="base_tf_broadcaster_node" output="screen" pkg="radar_slam" type="base_tf_broadcaster_node" />
 
-  <!-- Run the radar interface test node for processing CAN data into radar messages and visualization markers -->
-  <node name="radar_ros_interface_test_node" pkg="radar_ros_interface" type="radar_ros_interface_test_node" />
-
   <!-- Load the car URDF for visualization and publish robot states -->
   <arg name="model" default="$(find radar_slam)/urdf/car.urdf"/>
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
@@ -22,6 +19,6 @@
   <node name="rviz_test_car_pose_est" pkg="rviz" type="rviz" args="-d $(arg rvizconfig_test_car_pose_est)" required="true" />
 
   <!-- Run the node to publish car data messages -->
-  <node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/bagfiles/gps_k79_data_12_19_2018.bag"/>
+  <node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/bagfiles/long.bag"/>
 
 </launch>

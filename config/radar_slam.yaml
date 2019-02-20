@@ -35,4 +35,5 @@ pf_update_on: true
 print_debug: false
 
 #radar_data_topics: ["tipi_79_bsd_front_left_data"]
-radar_data_topics: ["tipi_79_bsd_front_left_data", "tipi_79_bsd_front_right_data", "tipi_79_bsd_rear_left_data", "tipi_79_bsd_rear_right_data"]
+#radar_data_topics: ["tipi_79_bsd_front_left_data", "tipi_79_bsd_front_right_data", "tipi_79_bsd_rear_left_data", "tipi_79_bsd_rear_right_data"]
+radar_data_topics: ["front_right_radar_data", "rear_left_radar_data"]
