@@ -68,7 +68,7 @@ Visualization Manager:
       Radius: 0.00999999978
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 1
+    - Alpha: 0.75
       Class: rviz/RobotModel
       Collision Enabled: false
       Enabled: true
@@ -87,12 +87,12 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        left_radar_link:
+        front_right_radar_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        right_radar_link:
+        rear_left_radar_link:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -104,19 +104,32 @@ Visualization Manager:
       Value: true
       Visual Enabled: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: true
+        base_link:
+          Value: true
+        chassis:
+          Value: true
+        front_right_radar_link:
+          Value: true
+        rear_left_radar_link:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        base_link:
+          chassis:
+            front_right_radar_link:
+              {}
+            rear_left_radar_link:
+              {}
       Update Interval: 0
-      Value: false
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -142,25 +155,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/XYOrbit
-      Distance: 3.3966732
+      Distance: 4.77208138
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.351670176
-        Y: 0.883383512
-        Z: -3.23160475e-06
+        X: 0.582340598
+        Y: -0.467681527
+        Z: -2.75476759e-06
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 0.394797802
+      Pitch: 0.884797335
       Target Frame: <Fixed Frame>
       Value: XYOrbit (rviz)
-      Yaw: 3.88118148
+      Yaw: 3.13119769
     Saved: ~
 Window Geometry:
   Displays:
