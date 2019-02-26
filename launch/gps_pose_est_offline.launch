@@ -9,7 +9,17 @@
   <!-- Run the point cloud visualization nodes -->
   <node name="front_right_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic front_right_radar_data" />
   <node name="rear_left_data_viz_node" output="screen" pkg="radar_ros_interface" type="radar_data_viz_point_cloud_node" args="--topic rear_left_radar_data" />
-  
+
+  <!-- Run the laser scan nodes -->
+  <node name="front_right_radar_data_to_laser_scan_node" output="screen" pkg="radar_ros_interface" type="radar_data_to_laser_scan_node" args="--topic front_right_radar_data" >
+    <param name="angle_increment" value="0.01745" />
+    <param name="range_min" value="2.0" />
+  </node>
+  <node name="rear_left_radar_data_to_laser_scan_node" output="screen" pkg="radar_ros_interface" type="radar_data_to_laser_scan_node" args="--topic rear_left_radar_data" >
+    <param name="angle_increment" value="0.01745" />
+    <param name="range_min" value="2.0" />
+  </node>
+
   <!-- Load the car URDF for visualization and publish robot states -->
   <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
   <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
@@ -31,7 +41,7 @@
   <!-- <node pkg="image_view" type="image_view" name="image_view"> -->
   <!--   <remap from="image" to="debug_image"/> -->
   <!-- </node> -->
-
+  
   <!-- Load the rviz configuration -->
   <arg name="rvizconfig_gps_pose_est" default="$(find radar_slam)/rviz/gps_pose_est.rviz" />
 
