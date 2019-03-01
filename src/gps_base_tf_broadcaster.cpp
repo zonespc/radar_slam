@@ -1,5 +1,5 @@
 /*
-  Copyright <2018> <Ainstein, Inc.>
+  Copyright <2018-2019> <Ainstein, Inc.>
 
   Redistribution and use in source and binary forms, with or without modification, are permitted 
   provided that the following conditions are met:
@@ -33,21 +33,28 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <geometry_msgs/Twist.h>
-
+#include <piksi_rtk_msgs/VelNed.h>
 #include <radar_sensor_msgs/GPSData.h>
 
 class GPSPoseEstimator {
 
 public:
-  GPSPoseEstimator()
+  GPSPoseEstimator() :
+    nh_private_( "~" )
   {
-    // Register the callback:
-    sub_gps_data_ = node_handle_.subscribe( "/gps_data", 10,
-					    &GPSPoseEstimator::updateGPSData,
-					    this );
-
-    // Get the heading LPF coefficient:
-    node_handle_.param( "heading_lpf", alpha_, 0.1 );
+    // Register the callback for piksi GPS data:
+    sub_gps_data_radar_ = nh_.subscribe( "gps_data", 10,
+					 &GPSPoseEstimator::updateGPSDataRadar,
+					 this );
+    
+    // Register the callback for radar-routed GPS data (DEPRECATED, TO BE REMOVED):
+    sub_gps_data_piksi_ = nh_.subscribe( "/piksi/vel_ned", 10,
+					 &GPSPoseEstimator::updateGPSDataPiksi,
+					 this );
+    
+    // Get parameters:
+    nh_private_.param( "gps_vel_lpf", gps_vel_lpf_, 0.1 );
+    nh_private_.param( "integration_rate", integration_rate_, 1000.0 );
     
     // Initialize the pose estimate:
     base_pose_.translation() = Eigen::Vector3d::Zero();
@@ -60,7 +67,7 @@ public:
       Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY() ).toRotationMatrix();
 
     // Create and launch the pose update thread:
-    thread_ = std::unique_ptr<std::thread>( new std::thread( &GPSPoseEstimator::updatePose, this, 1000.0 ) );
+    thread_ = std::unique_ptr<std::thread>( new std::thread( &GPSPoseEstimator::updatePose, this, integration_rate_ ) );
     mutex_.lock();
     is_running_ = true;
     mutex_.unlock();
@@ -76,24 +83,36 @@ public:
     thread_->join();
   }
   
-  void updateGPSData( const radar_sensor_msgs::GPSData &msg )
+  void updateGPSDataPiksi( const piksi_rtk_msgs::VelNed &msg )
   {
     mutex_.lock();
-    gps_msg_ = msg;
+    gps_vel_ned_ = 0.001 * Eigen::Vector3d( static_cast<double>( msg.n ),
+					    static_cast<double>( msg.e ),
+					    static_cast<double>( msg.d ) );
+    mutex_.unlock();
+  }
+
+  
+  void updateGPSDataRadar( const radar_sensor_msgs::GPSData &msg )
+  {
+    mutex_.lock();
+    gps_vel_ned_ = Eigen::Vector3d( msg.velocity_ned.x,
+				    msg.velocity_ned.y,
+				    msg.velocity_ned.z );
     mutex_.unlock();
   }
 
   void updatePose( double freq )
   {
     // Local variables:
-    radar_sensor_msgs::GPSData msg;
     Eigen::Vector3d vel_ned = Eigen::Vector3d::Zero();
+    Eigen::Vector3d vel_ned_lpf = vel_ned; // low pass filtered
     bool first_time = true;  
     ros::Time time_now, time_prev;
     double dt;
 
     // Initialize the car velocity publisher:
-    pub_car_vel_ = node_handle_.advertise<geometry_msgs::Twist>( "car_vel", 1000 );
+    pub_car_vel_ = nh_private_.advertise<geometry_msgs::Twist>( "car_vel", 1000 );
     
     // Create ROS rate for running at desired frequency:
     ros::Rate update_pose_rate( freq );
@@ -116,20 +135,21 @@ public:
 
 	// Get the latest GPS data:
 	mutex_.lock();
-	msg = gps_msg_;
+	vel_ned = gps_vel_ned_;
 	mutex_.unlock();
+
+	// Ignore the z direction velocity for now, keep everything 2d:
+	vel_ned(2) = 0.0;
 
 	// Compute the actual delta time:
 	time_now = ros::Time::now();
 	dt = ( time_now - time_prev ).toSec();
 
 	// Get the latest GPS velocity and low pass filter it, ignoring z for now:
-	vel_ned = alpha_ * Eigen::Vector3d( msg.velocity_ned.x,
-					    msg.velocity_ned.y,
-					    0.0 ) + ( 1.0 - alpha_ ) * vel_ned;
+	vel_ned_lpf = gps_vel_lpf_ * vel_ned + ( 1.0 - gps_vel_lpf_ ) * vel_ned_lpf;
 	
 	// Transform the GPS velocity from NED to world frame:
-	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned;
+	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned_lpf;
 	
 	// Integrate the estimated pose:
 	base_pose_.translation() += dt * vel_world;
@@ -170,11 +190,15 @@ public:
     
   
 private:
-  ros::NodeHandle node_handle_;
-  ros::Subscriber sub_gps_data_;
-  radar_sensor_msgs::GPSData gps_msg_;
-
-  double alpha_;
+  ros::NodeHandle nh_;
+  ros::NodeHandle nh_private_;
+  
+  ros::Subscriber sub_gps_data_radar_;
+  ros::Subscriber sub_gps_data_piksi_;
+  Eigen::Vector3d gps_vel_ned_;
+  
+  double gps_vel_lpf_;
+  double integration_rate_;
   
   ros::Publisher pub_car_vel_;
   

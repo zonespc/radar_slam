@@ -36,18 +36,23 @@
 class CarJointStatePub {
 
 public:
-  CarJointStatePub()
+  CarJointStatePub( void ) :
+    nh_private_( "~" )
   {
     // Register the callback:
-    sub_car_data_ = node_handle_.subscribe( "/car_data", 10,
-					    &CarJointStatePub::updateCarJointState,
-					    this );
-    // Get parameters:
-    node_handle_.getParam( "steering_ratio", steering_ratio_ );
-    node_handle_.getParam( "wheel_radius", wheel_radius_ );
+    sub_car_data_ = nh_.subscribe( "car_data", 10,
+				   &CarJointStatePub::updateCarJointState,
+				   this );
+    
+    // Get parameters (defaults for Acura ILX 2016):
+    nh_private_.param( "steering_ratio", steering_ratio_, 18.61 );
+    nh_private_.param( "wheel_radius", wheel_radius_, 0.31242 );
 
+    // Integration rate for wheel speeds:
+    nh_private_.param( "integration_rate", integration_rate_, 1000.0 );
+    
     // Create and launch the pose update thread:
-    thread_ = std::unique_ptr<std::thread>( new std::thread( &CarJointStatePub::publishLoop, this, 1000.0 ) );
+    thread_ = std::unique_ptr<std::thread>( new std::thread( &CarJointStatePub::publishLoop, this, integration_rate_ ) );
     mutex_.lock();
     is_running_ = true;
     mutex_.unlock();
@@ -93,7 +98,7 @@ public:
     bool first_time = true;
 
     // Initialize the joint state publisher:
-    pub_joint_state_ = node_handle_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
+    pub_joint_state_ = nh_.advertise<sensor_msgs::JointState>( "joint_states", 1000 );
     
     // Create ROS rate for running at desired frequency:
     ros::Rate publish_loop_rate( freq );
@@ -171,8 +176,10 @@ public:
 private:
   double steering_ratio_;
   double wheel_radius_;
+  double integration_rate_;
   
-  ros::NodeHandle node_handle_;
+  ros::NodeHandle nh_;
+  ros::NodeHandle nh_private_;
   ros::Subscriber sub_car_data_;
   car_data_interface::CarData car_data_msg_;
   ros::Publisher pub_joint_state_;

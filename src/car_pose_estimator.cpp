@@ -1,7 +1,8 @@
-#include "CarPoseEstimator.h"
+#include "radar_slam/car_pose_estimator.h"
 #include <numeric>
 
 CarPoseEstimator::CarPoseEstimator( void ) :
+        nh_private_( "~" ),
         listen_tf_( buffer_tf_ ),
         dist_speed_( 0.0, 1.0 ),
         dist_steer_angle_( 0.0, 1.0 ),
@@ -12,41 +13,41 @@ CarPoseEstimator::CarPoseEstimator( void ) :
         first_time_( true )
 {
     // Load the YAML parameters:
-    node_handle_.getParam( "wheelbase", wheelbase );
-    node_handle_.getParam( "steering_ratio", steering_ratio );
+    nh_private_.getParam( "wheelbase", wheelbase );
+    nh_private_.getParam( "steering_ratio", steering_ratio );
 
-    node_handle_.getParam( "map_grid_res", map_grid_res );
-    node_handle_.getParam( "map_grid_size", map_grid_size );
-    node_handle_.getParam( "num_update_cells", num_update_cells );
+    nh_private_.getParam( "map_grid_res", map_grid_res );
+    nh_private_.getParam( "map_grid_size", map_grid_size );
+    nh_private_.getParam( "num_update_cells", num_update_cells );
 
-    node_handle_.getParam( "sigma_r", sigma_r );
-    node_handle_.getParam( "sigma_th", sigma_th );
-    node_handle_.getParam( "sigma_no_r", sigma_no_r );
-    node_handle_.getParam( "sigma_no_th", sigma_no_th );
-    node_handle_.getParam( "max_r", max_r );
-    node_handle_.getParam( "max_th", max_th );
-    node_handle_.getParam( "min_snr", min_snr );
-    node_handle_.getParam( "prob_fa", prob_fa );
+    nh_private_.getParam( "sigma_r", sigma_r );
+    nh_private_.getParam( "sigma_th", sigma_th );
+    nh_private_.getParam( "sigma_no_r", sigma_no_r );
+    nh_private_.getParam( "sigma_no_th", sigma_no_th );
+    nh_private_.getParam( "max_r", max_r );
+    nh_private_.getParam( "max_th", max_th );
+    nh_private_.getParam( "min_snr", min_snr );
+    nh_private_.getParam( "prob_fa", prob_fa );
 
-    node_handle_.getParam( "sigma_speed", sigma_speed );
-    node_handle_.getParam( "sigma_steer_angle", sigma_steer_angle );
+    nh_private_.getParam( "sigma_speed", sigma_speed );
+    nh_private_.getParam( "sigma_steer_angle", sigma_steer_angle );
 
-    node_handle_.getParam( "rel_speed_thresh", rel_speed_thresh );
+    nh_private_.getParam( "rel_speed_thresh", rel_speed_thresh );
 
-    node_handle_.getParam( "sigma_px_init", sigma_px_init );
-    node_handle_.getParam( "sigma_py_init", sigma_py_init );
-    node_handle_.getParam( "sigma_yaw_init", sigma_yaw_init );
+    nh_private_.getParam( "sigma_px_init", sigma_px_init );
+    nh_private_.getParam( "sigma_py_init", sigma_py_init );
+    nh_private_.getParam( "sigma_yaw_init", sigma_yaw_init );
 
-    node_handle_.getParam( "num_particles", num_particles );
-    node_handle_.getParam( "p_alpha", p_alpha );
-    node_handle_.getParam( "w_min_max_thresh", w_min_max_thresh );
+    nh_private_.getParam( "num_particles", num_particles );
+    nh_private_.getParam( "p_alpha", p_alpha );
+    nh_private_.getParam( "w_min_max_thresh", w_min_max_thresh );
 
-    node_handle_.getParam( "dec_rate", dec_rate );
-    node_handle_.getParam( "map_detections_only", map_detections_only );
-    node_handle_.getParam( "use_sensor_fov", use_sensor_fov );
-    node_handle_.getParam( "pf_update_on", pf_update_on );
+    nh_private_.getParam( "dec_rate", dec_rate );
+    nh_private_.getParam( "map_detections_only", map_detections_only );
+    nh_private_.getParam( "use_sensor_fov", use_sensor_fov );
+    nh_private_.getParam( "pf_update_on", pf_update_on );
 
-    node_handle_.getParam( "radar_data_topics", radar_data_topics );
+    nh_private_.getParam( "radar_data_topics", radar_data_topics );
 
     // Initialize car position and orientation (pose):
     base_pose_.translation() = Eigen::Vector3d::Zero();
@@ -80,20 +81,20 @@ CarPoseEstimator::CarPoseEstimator( void ) :
     // Initialize particle pose array info:
     particle_pose_array_.header.frame_id = "/base_link";
     particle_pose_array_.poses.resize( num_particles );
-    pub_poses_ = node_handle_.advertise<geometry_msgs::PoseArray>( "particle_poses", 10 );
+    pub_poses_ = nh_private_.advertise<geometry_msgs::PoseArray>( "particle_poses", 10 );
 
     // Subscribe to the car_speed topic with the updatePose callback:
-    sub_car_speed_ = node_handle_.subscribe( "car_data", 10,
-                                             &CarPoseEstimator::updatePose,
-                                             this );
+    sub_car_speed_ = nh_.subscribe( "car_data", 10,
+				    &CarPoseEstimator::updatePose,
+				    this );
 
     // Subscribe to the radar target topics with the updateMap callback:
     sub_radar_targets_.resize( radar_data_topics.size() );
     for( int i = 0; i < radar_data_topics.size(); ++i )
     {
-        sub_radar_targets_.at( i ) = node_handle_.subscribe(
+        sub_radar_targets_.at( i ) = nh_.subscribe(
                 radar_data_topics.at( i ), 10,
-                                                             &CarPoseEstimator::updateMap, this );
+		&CarPoseEstimator::updateMap, this );
     }
 
     //Initialize the log-odds map representation:
@@ -115,8 +116,8 @@ CarPoseEstimator::CarPoseEstimator( void ) :
     msg_map_.info.origin.position.y = map_origin_( 1 );
     msg_map_.info.origin.position.z = map_origin_( 2 );
 
-    pub_ogm_ = node_handle_.advertise<nav_msgs::OccupancyGrid>( "grid_map",
-                                                                10 );
+    pub_ogm_ = nh_private_.advertise<nav_msgs::OccupancyGrid>( "grid_map",
+							       10 );
 
     dec_ind_ = 0;
 }

@@ -578,9 +578,13 @@ private:
     bool first_time_;
 
     /**
-     * ROS node handle used for interacting with ROS objects.
+     * Public ROS node handle used for subscribing to topics.
      */
-    ros::NodeHandle node_handle_;
+    ros::NodeHandle nh_;
+    /**
+     * Private ROS node handle used for reading parameters and advertising topics.
+     */
+    ros::NodeHandle nh_private_;
     /**
      * Subscriber for receiving CarData messages.
      */
