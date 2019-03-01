@@ -24,7 +24,7 @@ DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
 OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "CarPoseEstimator.h"
+#include "radar_slam/car_pose_estimator.h"
 
 int main( int argc, char** argv )
 {
