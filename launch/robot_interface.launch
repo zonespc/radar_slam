@@ -1,0 +1,16 @@
+<launch>
+
+  <!-- Load the car URDF for visualization and publish robot states -->
+  <arg name="model" default="$(find radar_slam)/urdf/car_gps_test.urdf"/>
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" >
+    <param name="publish_frequency" value="100" />
+  </node>
+
+  <!-- Run the car joint state publisher using car data -->
+  <node name="car_joint_state_pub" pkg="radar_slam" type="car_joint_state_pub_node" output="screen" >
+    <rosparam command="load" file="$(find radar_slam)/config/car_props.yaml" />
+    <param name="integration_rate" value="10.0" />
+  </node>
+
+</launch>
