@@ -4,5 +4,3 @@ min_dist_thresh: 3.0 # threshold for filtering close targets (issue with old fir
 max_dist_thresh: 15.0 # threshold for filtering close targets (issue with old firmware)
 steering_ratio: 18.61
 wheel_radius: 0.31242 # 24.6in diameter tire 
-compute_3d: false
-is_rotated: false

@@ -1,0 +1,39 @@
+<launch>
+
+  <!-- Front Left K79 RadarData to LaserScan Node -->
+  <node name="radardata_to_laserscan_front_left" pkg="radar_ros_interface" type="radardata_to_laserscan_node" output="screen"  >
+    <remap from="radardata_in" to="/front_left_radar_data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="angle_increment" value="0.01745" />
+    <param name="range_min" value="2.0" />
+    <param name="rel_speed_thresh" value="10.0" />
+  </node>
+
+  <!-- Front Right K79 RadarData to LaserScan Node -->
+  <node name="radardata_to_laserscan_front_right" pkg="radar_ros_interface" type="radardata_to_laserscan_node" output="screen"  >
+    <remap from="radardata_in" to="/front_right_radar_data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="angle_increment" value="0.01745" />
+    <param name="range_min" value="2.0" />
+    <param name="rel_speed_thresh" value="10.0" />
+  </node>
+
+  <!-- Rear Left K79 RadarData to LaserScan Node -->
+  <node name="radardata_to_laserscan_rear_left" pkg="radar_ros_interface" type="radardata_to_laserscan_node" output="screen"  >
+    <remap from="radardata_in" to="/rear_left_radar_data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="angle_increment" value="0.01745" />
+    <param name="range_min" value="2.0" />
+    <param name="rel_speed_thresh" value="10.0" />
+  </node>
+
+  <!-- Rear Right K79 RadarData to LaserScan Node -->
+  <node name="radardata_to_laserscan_rear_right" pkg="radar_ros_interface" type="radardata_to_laserscan_node" output="screen"  >
+    <remap from="radardata_in" to="/rear_right_radar_data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="angle_increment" value="0.01745" />
+    <param name="range_min" value="2.0" />
+    <param name="rel_speed_thresh" value="10.0" />
+  </node>
+
+</launch>
