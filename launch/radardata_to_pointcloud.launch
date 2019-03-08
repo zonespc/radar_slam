@@ -2,9 +2,9 @@
 
   <!-- Front Left K79 RadarData to Pointcloud Node -->
   <node name="radardata_to_pointcloud_front_left" pkg="radar_ros_interface" type="radardata_to_pointcloud_node" output="screen" >
-    <remap from="radardata_in" to="/front_left_radar_data" />
+    <remap from="radardata_in" to="/k79_front_left/data" />
     <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
-    <param name="max_speed_thresh" value="10.0" />
+    <param name="max_speed_thresh" value="2.0" />
     <param name="min_dist_thresh" value="2.0" />
     <param name="max_dist_thresh" value="15.0" />
     <param name="compute_3d" value="false" />
@@ -13,31 +13,9 @@
 
   <!-- Front Right K79 RadarData to Pointcloud Node -->
   <node name="radardata_to_pointcloud_front_right" pkg="radar_ros_interface" type="radardata_to_pointcloud_node" output="screen" >
-    <remap from="radardata_in" to="/front_right_radar_data" />
+    <remap from="radardata_in" to="/k79_front_right/data" />
     <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
-    <param name="max_speed_thresh" value="10.0" />
-    <param name="min_dist_thresh" value="2.0" />
-    <param name="max_dist_thresh" value="15.0" />
-    <param name="compute_3d" value="false" />
-    <param name="is_rotated" value="false" />
-  </node>
-  
-  <!-- Rear Left K79 RadarData to Pointcloud Node -->
-  <node name="radardata_to_pointcloud_rear_left" pkg="radar_ros_interface" type="radardata_to_pointcloud_node" output="screen" >
-    <remap from="radardata_in" to="/rear_left_radar_data" />
-    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
-    <param name="max_speed_thresh" value="10.0" />
-    <param name="min_dist_thresh" value="2.0" />
-    <param name="max_dist_thresh" value="15.0" />
-    <param name="compute_3d" value="false" />
-    <param name="is_rotated" value="false" />
-  </node>
-
-  <!-- Rear Right K79 RadarData to Pointcloud Node -->
-  <node name="radardata_to_pointcloud_rear_right" pkg="radar_ros_interface" type="radardata_to_pointcloud_node" output="screen" >
-    <remap from="radardata_in" to="/rear_right_radar_data" />
-    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
-    <param name="max_speed_thresh" value="10.0" />
+    <param name="max_speed_thresh" value="2.0" />
     <param name="min_dist_thresh" value="2.0" />
     <param name="max_dist_thresh" value="15.0" />
     <param name="compute_3d" value="false" />

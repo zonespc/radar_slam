@@ -21,9 +21,6 @@
   <!-- Run the radar data to point cloud nodes -->
   <include file="$(find radar_slam)/launch/radardata_to_pointcloud.launch" />
 
-  <!-- Run the radar data to point cloud nodes -->
-  <include file="$(find radar_slam)/launch/radardata_to_laserscan.launch" />
-  
   <!-- Nodes to run only for ONLINE testing -->
   <group unless="$(arg is_offline)" >
     
@@ -46,9 +43,6 @@
     <group if="$(arg use_radars)" >
       <include file="$(find radar_slam)/launch/radar_interfaces.launch" />
     </group>
-    
-    <!-- Record the sensor data -->
-    <node name="recorder" pkg="rosbag" type="record" args="/k79_front_left/data /k79_front_right/data /k79_rear_left/data /k79_rear_right/data /piksi/vel_ned /car_data /usb_cam/camera_info /usb_cam/image_raw/compressed -o /home/nvidia/bagfiles/gps_pose_est" />
   
   </group>
 
