@@ -14,13 +14,19 @@
 
   <!-- TF broadcaster for base_link from integrated GPS data -->
   <node name="gps_base_tf_broadcaster" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" >
-    <param name="gps_vel_lpf" value="1.0" />
+    <param name="gps_vel_lpf" value="0.1" />
     <param name="integration_rate" value="10.0" />
   </node>
 
   <!-- Run the radar data to point cloud nodes -->
   <include file="$(find radar_slam)/launch/radardata_to_pointcloud.launch" />
 
+  <!-- Aggregate the point cloud scans -->
+  <node name="radar_point_cloud_assembler" pkg="laser_assembler" type="point_cloud_assembler" >
+    <remap from="cloud" to="radardata_to_pointcloud_rear_left/cloud" />
+    <param name="fixed_frame" value="map" />
+  </node>
+  
   <!-- Run the radar data to point cloud nodes -->
   <include file="$(find radar_slam)/launch/radardata_to_laserscan.launch" />
   
