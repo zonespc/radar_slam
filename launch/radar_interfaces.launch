@@ -6,7 +6,7 @@
     <param name="host_port" value="1024" />
     <param name="radar_ip" value="10.0.0.10" />
     <param name="radar_port" value="7" />
-    <param name="frame" value="/front_left_radar_link" />
+    <param name="frame_id" value="/front_left_radar_link" />
   </node>
   
   <!-- Front Right K79 Interface Node -->
@@ -15,7 +15,7 @@
     <param name="host_port" value="1025" />
     <param name="radar_ip" value="10.0.0.11" />
     <param name="radar_port" value="7" />
-    <param name="frame" value="/front_right_radar_link" />
+    <param name="frame_id" value="/front_right_radar_link" />
   </node>
 
   <!-- Rear Left K79 Interface Node -->
@@ -24,7 +24,7 @@
     <param name="host_port" value="1026" />
     <param name="radar_ip" value="10.0.0.12" />
     <param name="radar_port" value="7" />
-    <param name="frame" value="/rear_left_radar_link" />
+    <param name="frame_id" value="/rear_left_radar_link" />
   </node>
 
   <!-- Rear Right K79 Interface Node -->
@@ -33,7 +33,7 @@
     <param name="host_port" value="1027" />
     <param name="radar_ip" value="10.0.0.13" />
     <param name="radar_port" value="7" />
-    <param name="frame" value="/rear_right_radar_link" />
+    <param name="frame_id" value="/rear_right_radar_link" />
   </node>
   
 </launch>

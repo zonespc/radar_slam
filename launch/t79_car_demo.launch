@@ -1,0 +1,163 @@
+<launch>
+  <!-- Set whether to use GPS for additional filtering -->
+  <arg name="use_piksi_gps" value="true" />
+
+  <!-- Filter out stationary targets (5.0 m/s filters all but cars) -->
+  <arg name="min_speed_thresh" value="5.0" /> 
+
+  <!-- Filter out moving targets (2.0 m/s filters cars) -->
+  <arg name="max_speed_thresh" value="1.0" /> 
+
+  <!-- Filter out close targets -->
+  <arg name="min_dist_thresh" value="1.0" /> 
+
+  <!-- Filter out far targets -->
+  <arg name="max_dist_thresh" value="5.0" /> 
+
+  <!-- Load the car URDF for visualization and publish robot states -->
+  <arg name="model" default="$(find radar_slam)/urdf/car.urdf"/>
+  <param name="robot_description" command="$(find xacro)/xacro --inorder $(arg model)" />
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" >
+    <param name="publish_frequency" value="100" />
+  </node>
+  
+  <!-- Run the car joint state publisher using car data -->
+  <node name="car_joint_state_pub" pkg="radar_slam" type="car_joint_state_pub_node" output="screen" >
+    <rosparam command="load" file="$(find radar_slam)/config/car_props.yaml" />
+    <param name="integration_rate" value="10.0" />
+  </node>
+
+  <!-- Run the Piksi Multi rover ROS node -->
+  <group if="$(arg use_piksi_gps)" >
+    <include file="$(find piksi_multi_rtk_ros)/launch/piksi_multi_rover.launch" />
+    
+    <!-- TF broadcaster for base_link from integrated GPS data -->
+    <node name="gps_base_tf_broadcaster" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" >
+      <param name="gps_vel_lpf" value="1.0" />
+      <param name="integration_rate" value="10.0" />
+      <param name="publish_tf" value="true" />
+    </node>
+  </group>
+
+  <!-- Publish mock base_link transform instead of using GPS -->
+  <group unless="$(arg use_piksi_gps)" >
+    <node name="map_to_base_link_broadcaster" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 1 map base_link 100" />
+  </group>
+  
+  <!-- CAN interface for can1 on Tegra-A -->
+  <node name="can0_socketcan_node" pkg="socketcan_bridge" type="socketcan_bridge_node">
+    <param name="can_device" value="can0" />
+  </node>
+
+  <!-- CAN interface for can1 on Tegra-B -->
+  <machine name="tegra-b" address="10.42.0.29" user="nvidia" password="nvidia" timeout="5" env-loader="/home/nvidia/catkin_ws/devel/remote_env_loader.sh" />
+  <node machine="tegra-b" name="can1_socketcan_node" pkg="socketcan_bridge" type="socketcan_bridge_node">
+    <param name="can_device" value="can1" />
+  </node>
+  
+  <!-- Front Left T79 -->
+  <node name="t79_FL_node" pkg="radar_ros_interface" type="t79_bsd_node" required="true" >
+    <param name="radar_type" value="1" />
+    <param name="frame_id" value="front_left_radar_link" />
+  </node>
+
+  <!-- Front Right T79 -->
+  <node name="t79_FR_node" pkg="radar_ros_interface" type="t79_bsd_node" required="true" >
+    <param name="radar_type" value="2" />
+    <param name="frame_id" value="front_right_radar_link" />
+  </node>
+
+  <!-- Rear Left T79 -->
+  <node name="t79_RL_node" pkg="radar_ros_interface" type="t79_bsd_node" required="true" >
+    <param name="radar_type" value="3" />
+    <param name="frame_id" value="rear_left_radar_link" />
+  </node>
+
+  <!-- Rear Right T79 -->
+  <node name="t79_RR_node" pkg="radar_ros_interface" type="t79_bsd_node" required="true" >
+    <param name="radar_type" value="4" />
+    <param name="frame_id" value="rear_right_radar_link" />
+  </node>
+
+  <!-- Nodelet manager for the RadarData to PointCloud nodelets -->
+  <node pkg="nodelet" type="nodelet" name="pcl_nodelet"  args="manager" output="screen"/>
+  
+  <!-- Front Left T79 BSD RadarData to Pointcloud Node -->
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_front_left_raw_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_FL_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="raw" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_front_left_tracked_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_FL_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="tracked" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+    
+  <!-- Front Right T79 BSD RadarData to Pointcloud Node -->
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_front_right_raw_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_FR_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="raw" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_front_right_tracked_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_FR_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="tracked" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+
+  <!-- Rear Left T79 BSD RadarData to Pointcloud Node -->
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_rear_left_raw_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_RL_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="raw" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_rear_left_tracked_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_RL_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="tracked" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+    
+  <!-- Rear Right T79 BSD RadarData to Pointcloud Node -->
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_rear_right_raw_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_RR_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="raw" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+  <node pkg="nodelet" type="nodelet" name="radardata_to_pointcloud_rear_right_tracked_nodelet" args="load radar_ros_interface/radardata_to_pointcloud_nodelet pcl_nodelet" output="screen" >
+    <remap from="radardata_in" to="/t79_RR_node/data" />
+    <remap from="radar_vel" to="/gps_base_tf_broadcaster/car_vel" />
+    <param name="target_type" value="tracked" />
+    <param name="min_dist_thresh" value="$(arg min_dist_thresh)" />
+    <param name="max_dist_thresh" value="$(arg max_dist_thresh)" />
+    <param name="max_speed_thresh" value="$(arg max_speed_thresh)" />
+  </node>
+  
+  <!-- Load the rviz configuration -->
+  <arg name="rvizconfig" default="$(find radar_slam)/rviz/t79_car_demo.rviz" />
+
+  <!-- Run rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" output="screen" args="-d $(arg rvizconfig)" />
+
+</launch>
