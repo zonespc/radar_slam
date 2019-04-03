@@ -28,7 +28,7 @@
   </node>
   
   <!-- Run the radar data to point cloud nodes -->
-  <include file="$(find radar_slam)/launch/radardata_to_laserscan.launch" />
+  <!-- <include file="$(find radar_slam)/launch/radardata_to_laserscan.launch" /> -->
   
   <!-- Nodes to run only for ONLINE testing -->
   <group unless="$(arg is_offline)" >

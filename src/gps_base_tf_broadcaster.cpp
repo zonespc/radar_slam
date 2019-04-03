@@ -55,6 +55,7 @@ public:
     // Get parameters:
     nh_private_.param( "gps_vel_lpf", gps_vel_lpf_, 0.1 );
     nh_private_.param( "integration_rate", integration_rate_, 1000.0 );
+    nh_private_.param( "publish_tf", publish_tf_, true );
     
     // Initialize the pose estimate:
     base_pose_.translation() = Eigen::Vector3d::Zero();
@@ -167,8 +168,11 @@ public:
 	pose_tf.header.stamp = ros::Time::now();
 	pose_tf.child_frame_id = "base_link";
 	pose_tf.header.frame_id = "map";
-	bcast_tf_.sendTransform( pose_tf );
-
+	if( publish_tf_ )
+	  {
+	    bcast_tf_.sendTransform( pose_tf );
+	  }
+	
 	// Publish the car velocity:
 	geometry_msgs::Twist car_vel_msg;
 	tf2::toMsg( vel_world, car_vel_msg.linear );
@@ -199,6 +203,7 @@ private:
   
   double gps_vel_lpf_;
   double integration_rate_;
+  bool publish_tf_;
   
   ros::Publisher pub_car_vel_;
   
