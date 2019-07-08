@@ -32,7 +32,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_eigen/tf2_eigen.h>
-#include <geometry_msgs/Twist.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <piksi_rtk_msgs/VelNed.h>
 #include <radar_sensor_msgs/GPSData.h>
 
@@ -42,12 +42,17 @@ public:
   GPSPoseEstimator() :
     nh_private_( "~" )
   {
-    // Register the callback for piksi GPS data:
+    // Register the callback for radar-routed GPS data (DEPRECATED, TO BE REMOVED):
     sub_gps_data_radar_ = nh_.subscribe( "gps_data", 10,
 					 &GPSPoseEstimator::updateGPSDataRadar,
 					 this );
+
+    // Register the callback for RAC GPS data:
+    sub_gps_data_rac_ = nh_.subscribe( "/vel", 10,
+				       &GPSPoseEstimator::updateGPSDataRAC,
+				       this );
     
-    // Register the callback for radar-routed GPS data (DEPRECATED, TO BE REMOVED):
+    // Register the callback for piksi GPS data:
     sub_gps_data_piksi_ = nh_.subscribe( "/piksi/vel_ned", 10,
 					 &GPSPoseEstimator::updateGPSDataPiksi,
 					 this );
@@ -84,25 +89,41 @@ public:
     thread_->join();
   }
   
-  void updateGPSDataPiksi( const piksi_rtk_msgs::VelNed &msg )
-  {
-    mutex_.lock();
-    gps_vel_ned_ = 0.001 * Eigen::Vector3d( static_cast<double>( msg.n ),
-					    static_cast<double>( msg.e ),
-					    static_cast<double>( msg.d ) );
-    mutex_.unlock();
-  }
-
-  
   void updateGPSDataRadar( const radar_sensor_msgs::GPSData &msg )
   {
     mutex_.lock();
+
     gps_vel_ned_ = Eigen::Vector3d( msg.velocity_ned.x,
 				    msg.velocity_ned.y,
 				    msg.velocity_ned.z );
+
+    mutex_.unlock();
+  }
+  
+  void updateGPSDataPiksi( const piksi_rtk_msgs::VelNed &msg )
+  {
+    mutex_.lock();
+
+    // Copy and scale Piksi GPS data (NED frame):
+    gps_vel_ned_ = 0.001 * Eigen::Vector3d( static_cast<double>( msg.n ),
+					    static_cast<double>( msg.e ),
+					    static_cast<double>( msg.d ) );
+
     mutex_.unlock();
   }
 
+  void updateGPSDataRAC( const geometry_msgs::TwistStamped &msg )
+  {
+    mutex_.lock();
+    
+    // Convert the RAC message from ENU to NED and check for NaN:
+    gps_vel_ned_.x() = std::isnan( msg.twist.linear.y ) ? 0.0 : msg.twist.linear.y;
+    gps_vel_ned_.y() = std::isnan( msg.twist.linear.x ) ? 0.0 : msg.twist.linear.x;
+    gps_vel_ned_.z() = 0.0;
+
+    mutex_.unlock();
+  }
+  
   void updatePose( double freq )
   {
     // Local variables:
@@ -199,6 +220,7 @@ private:
   
   ros::Subscriber sub_gps_data_radar_;
   ros::Subscriber sub_gps_data_piksi_;
+  ros::Subscriber sub_gps_data_rac_;
   Eigen::Vector3d gps_vel_ned_;
   
   double gps_vel_lpf_;
