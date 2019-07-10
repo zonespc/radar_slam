@@ -61,6 +61,10 @@ public:
     nh_private_.param( "gps_vel_lpf", gps_vel_lpf_, 0.1 );
     nh_private_.param( "integration_rate", integration_rate_, 1000.0 );
     nh_private_.param( "publish_tf", publish_tf_, true );
+    nh_private_.param( "publish_pose_stamped", publish_pose_stamped_, true );
+
+    // Initialize the GPS NED velocity, to be updated from GPS node:
+    gps_vel_ned_.setZero();
     
     // Initialize the pose estimate:
     base_pose_.translation() = Eigen::Vector3d::Zero();
@@ -71,7 +75,7 @@ public:
     ned_to_world_.translation() = Eigen::Vector3d::Zero();
     ned_to_world_.linear() =
       Eigen::AngleAxisd( M_PI, Eigen::Vector3d::UnitY() ).toRotationMatrix();
-
+    
     // Create and launch the pose update thread:
     thread_ = std::unique_ptr<std::thread>( new std::thread( &GPSPoseEstimator::updatePose, this, integration_rate_ ) );
     mutex_.lock();
@@ -135,6 +139,9 @@ public:
 
     // Initialize the car velocity publisher:
     pub_car_vel_ = nh_private_.advertise<geometry_msgs::Twist>( "car_vel", 1000 );
+
+    // Initialize the pose publisher:
+    pub_pose_stamped_ = nh_private_.advertise<geometry_msgs::PoseStamped>( "base_link_pose", 1000 );
     
     // Create ROS rate for running at desired frequency:
     ros::Rate update_pose_rate( freq );
@@ -172,7 +179,7 @@ public:
 	
 	// Transform the GPS velocity from NED to world frame:
 	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned_lpf;
-	
+
 	// Integrate the estimated pose:
 	base_pose_.translation() += dt * vel_world;
 	
@@ -193,7 +200,17 @@ public:
 	  {
 	    bcast_tf_.sendTransform( pose_tf );
 	  }
-	
+
+	// Send the updated base pose message:
+	geometry_msgs::PoseStamped pose;
+	pose.pose = tf2::toMsg( base_pose_ );
+	pose.header.stamp = ros::Time::now();
+	pose.header.frame_id = "map";
+	if( publish_pose_stamped_ )
+	  {
+	    pub_pose_stamped_.publish( pose );
+	  }
+
 	// Publish the car velocity:
 	geometry_msgs::Twist car_vel_msg;
 	tf2::toMsg( vel_world, car_vel_msg.linear );
@@ -226,8 +243,10 @@ private:
   double gps_vel_lpf_;
   double integration_rate_;
   bool publish_tf_;
+  bool publish_pose_stamped_;
   
   ros::Publisher pub_car_vel_;
+  ros::Publisher pub_pose_stamped_;
   
   Eigen::Affine3d ned_to_world_;
   Eigen::Affine3d base_pose_;
