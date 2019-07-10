@@ -1,0 +1,21 @@
+<launch>
+
+  <!-- ROS bagfile name -->
+  <arg name="rosbag_name" value="/home/nrotella/bagfiles/yan.bag" />
+  
+  <!-- Set to use simulated time -->
+  <param name="use_sim_time" value="true" />	  
+
+  <!-- Run the node to publish recorded bagfile -->
+  <node pkg="rosbag" type="play" name="player" output="screen" args="--clock $(arg rosbag_name)" />
+
+  <!-- TF broadcaster for base_link from integrated GPS data -->
+  <node name="gps_base_tf_broadcaster" output="screen" pkg="radar_slam" type="gps_base_tf_broadcaster_node" >
+    <param name="gps_vel_lpf" value="0.1" />
+    <param name="integration_rate" value="1000.0" />
+  </node>
+
+  <!-- Run rviz -->
+  <node name="rviz_gps_pose_est" pkg="rviz" type="rviz" output="screen" />
+
+</launch>
