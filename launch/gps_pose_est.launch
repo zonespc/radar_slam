@@ -1,9 +1,0 @@
-<launch>
-  <include file="$(find radar_slam)/launch/gps_pose_est_base.launch" >
-    <arg name="is_offline" value="false" />
-    <arg name="use_cameras" value="false" />
-    <arg name="use_piksi_gps" value="false" />
-    <arg name="use_panda" value="false" />
-    <arg name="use_radars" value="true" />
-  </include>
-</launch>

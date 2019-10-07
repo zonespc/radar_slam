@@ -1,6 +1,0 @@
-<launch>  
-  <include file="$(find radar_slam)/launch/gps_pose_est_base.launch" >
-    <arg name="is_offline" value="true" />
-    <arg name="rosbag_name" value="long.bag" />
-  </include>
-</launch>
