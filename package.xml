@@ -14,22 +14,10 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>urdf</depend>
-  
-  <build_depend>roscpp</build_depend>
-  <build_depend>can_msgs</build_depend>
-  <build_depend>visualization_msgs</build_depend>
 
-  <build_export_depend>visualization_msgs</build_export_depend>
-  <build_export_depend>can_msgs</build_export_depend>
-  <build_export_depend>roscpp</build_export_depend>
-
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>can_msgs</exec_depend>
-  <exec_depend>visualization_msgs</exec_depend>
-
-  <depend>radar_sensor_msgs</depend>
+  <depend>roscpp</depend>
+  <depend>ainstein_radar_msgs</depend>
   <depend>piksi_rtk_msgs</depend>
-  <depend>radar_ros_interface</depend>
   <depend>car_data_interface</depend>
   
   <export>

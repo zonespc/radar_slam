@@ -32,7 +32,6 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <geometry_msgs/Twist.h>
 
-#include <radar_sensor_msgs/GPSData.h>
 #include <car_data_interface/CarData.h>
 
 #include <radar_slam/geometry_utils.h>

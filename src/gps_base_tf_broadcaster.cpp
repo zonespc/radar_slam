@@ -34,7 +34,6 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <geometry_msgs/Twist.h>
 #include <piksi_rtk_msgs/VelNed.h>
-#include <radar_sensor_msgs/GPSData.h>
 
 class GPSPoseEstimator {
 
@@ -43,11 +42,6 @@ public:
     nh_private_( "~" )
   {
     // Register the callback for piksi GPS data:
-    sub_gps_data_radar_ = nh_.subscribe( "gps_data", 10,
-					 &GPSPoseEstimator::updateGPSDataRadar,
-					 this );
-    
-    // Register the callback for radar-routed GPS data (DEPRECATED, TO BE REMOVED):
     sub_gps_data_piksi_ = nh_.subscribe( "/piksi/vel_ned", 10,
 					 &GPSPoseEstimator::updateGPSDataPiksi,
 					 this );
@@ -90,16 +84,6 @@ public:
     gps_vel_ned_ = 0.001 * Eigen::Vector3d( static_cast<double>( msg.n ),
 					    static_cast<double>( msg.e ),
 					    static_cast<double>( msg.d ) );
-    mutex_.unlock();
-  }
-
-  
-  void updateGPSDataRadar( const radar_sensor_msgs::GPSData &msg )
-  {
-    mutex_.lock();
-    gps_vel_ned_ = Eigen::Vector3d( msg.velocity_ned.x,
-				    msg.velocity_ned.y,
-				    msg.velocity_ned.z );
     mutex_.unlock();
   }
 
@@ -197,7 +181,6 @@ private:
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
   
-  ros::Subscriber sub_gps_data_radar_;
   ros::Subscriber sub_gps_data_piksi_;
   Eigen::Vector3d gps_vel_ned_;
   
