@@ -91,7 +91,12 @@ public:
   {
     // Local variables:
     Eigen::Vector3d vel_ned = Eigen::Vector3d::Zero();
-    Eigen::Vector3d vel_ned_lpf = vel_ned; // low pass filtered
+    Eigen::Vector3d vel_ned_lpf = Eigen::Vector3d::Zero(); // low pass filtered
+
+    mutex_.lock();
+    gps_vel_ned_ = Eigen::Vector3d::Zero();
+    mutex_.unlock();
+    
     bool first_time = true;  
     ros::Time time_now, time_prev;
     double dt;
@@ -135,10 +140,10 @@ public:
 	
 	// Transform the GPS velocity from NED to world frame:
 	Eigen::Vector3d vel_world = ned_to_world_ * vel_ned_lpf;
-	
+
 	// Integrate the estimated pose:
 	base_pose_.translation() += dt * vel_world;
-	
+
 	// Compute the yaw angle from velocity direction when moving:
 	if( vel_world.norm() >= 0.1 )
 	  {
